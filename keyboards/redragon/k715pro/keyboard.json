@@ -3,6 +3,7 @@
     "keyboard_name": "k715pro",
     "bootloader": "stm32duino",
     "bootmagic": {
+        "enabled": true,
         "matrix": [1, 0]
     },
     "diode_direction": "COL2ROW",
@@ -11,7 +12,7 @@
     },
     "encoder": {
         "rotary": [
-            {"pin_a": "B5", "pin_b": "B4"}
+            {"pin_a": "B5", "pin_b": "B4", "resolution": 2}
         ]
     },
     "features": {
@@ -181,7 +182,7 @@
     },
     "usb": {
         "device_version": "0.0.1",
-        "pid": "0x00D1",
+        "pid": "0x0021",
         "vid": "0x369B"
     },
     "layout_aliases": {
