@@ -16,9 +16,6 @@
 
 #include QMK_KEYBOARD_H
 
-static bool swd_disabled = false;
-
-
 enum layer_names
 {
     _BASE,
@@ -44,66 +41,33 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
     [_FnLay] = LAYOUT(
     QK_BOOT,          KC_MYCM, KC_WHOM, KC_CALC, KC_MSEL, KC_MPRV, KC_MNXT, KC_MPLY, KC_MSTP, KC_MUTE,   KC_VOLD, KC_VOLU, KC_MAIL,          XXXXXXX,
-    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   XXXXXXX, XXXXXXX, XXXXXXX, RM_NEXT,
-    EE_CLR , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   RM_PREV, RM_NEXT, XXXXXXX, XXXXXXX,
-    XXXXXXX, RM_SATU, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, RM_SPDD,   RM_SPDU,          XXXXXXX, XXXXXXX,
-    XXXXXXX,          RM_SATD, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, RM_HUEU, RM_HUED,   XXXXXXX, XXXXXXX, RM_VALU, XXXXXXX,
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   RM_SATD, RM_SATU, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   RM_HUED, RM_HUEU, XXXXXXX, XXXXXXX,
+    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   XXXXXXX,          XXXXXXX, RM_PREV,
+    XXXXXXX,          XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   XXXXXXX, XXXXXXX, RM_VALU, RM_NEXT,
     XXXXXXX, XXXXXXX, XXXXXXX,                            RM_TOGG,                   XXXXXXX, _______,   XXXXXXX, RM_SPDD, RM_VALD, RM_SPDU
     )
 };
 
-void keyboard_post_init_user(void) {
-  // Customise these values to desired behaviour  debug_enable=true;
-  debug_matrix=true;
-  debug_keyboard=true;
-  //debug_mouse=true;
-  swd_disabled = false;
-  //toggle_jtag();
-}
-
 void disable_jtag(void) {
-    if (!swd_disabled) {
-        uprintf("SWD is now being DISABLED\n");
-        AFIO->MAPR = (AFIO->MAPR & ~AFIO_MAPR_SWJ_CFG_Msk) | AFIO_MAPR_SWJ_CFG_DISABLE;
-        swd_disabled = true;
-    }
+    AFIO->MAPR = (AFIO->MAPR & ~AFIO_MAPR_SWJ_CFG_Msk) | AFIO_MAPR_SWJ_CFG_DISABLE;
     return;
 }
 
+void keyboard_post_init_user(void) {
+  // Customise these values to desired behaviour  debug_enable=true;
+  //debug_matrix=true;
+  //debug_keyboard=true;
+  //debug_mouse=true;
+  disable_jtag();
+}
+
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-
-    static uint16_t bootloader_key_timer = 0;
-    static bool bootloader_other_key_recorded = false;
-
-    if (keycode != KC_CAPS) { bootloader_other_key_recorded = true; }
-
 
   // If console is enabled, it will print the matrix position and status of each key pressed
 #ifdef CONSOLE_ENABLE
     uprintf("KL: kc: 0x%04X, col: %2u, row: %2u, pressed: %u, time: %5u, int: %u, count: %u\n", keycode, record->event.key.col, record->event.key.row, record->event.pressed, record->event.time, record->tap.interrupted, record->tap.count);
 #endif
-
-    switch (keycode) {
-        case KC_CAPS:
-            if (record->event.pressed) {
-                bootloader_key_timer = timer_read();
-                bootloader_other_key_recorded = false;  // start tracking other keys
-            } else {
-                if (!bootloader_other_key_recorded) {  // only go to bootloader if no other key has been pressed
-                    if (timer_elapsed(bootloader_key_timer) >= 5000) {
-                        #ifdef CONSOLE_ENABLE
-                            uprintf("KC_CAPS key held for more than 5s\n");
-                        #endif
-                        // do whatever JTAG stuff here
-                        disable_jtag();
-                    }
-                }
-                bootloader_key_timer = 0;  // reset timer counter on release so it can be used for tracking if CapsLock is pressed
-            }
-            break;
-        default:
-            break;
-    }
 
   return true;
 }
