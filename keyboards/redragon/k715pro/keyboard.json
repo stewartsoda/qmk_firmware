@@ -8,7 +8,7 @@
     },
     "diode_direction": "COL2ROW",
     "dynamic_keymap": {
-        "layer_count": 2
+        "layer_count": 3
     },
     "encoder": {
         "rotary": [
@@ -49,9 +49,9 @@
             "cycle_all": true,
             "cycle_left_right": true,
             "cycle_up_down": true,
+            "rainbow_moving_chevron": true,
             "cycle_out_in": true,
             "cycle_out_in_dual": true,
-            "rainbow_moving_chevron": true,
             "cycle_pinwheel": true,
             "cycle_spiral": true,
             "dual_beacon": true,
@@ -63,9 +63,9 @@
             "hue_breathing": true,
             "hue_pendulum": true,
             "hue_wave": true,
-            "pixel_fractal": true,
-            "pixel_flow": true,
             "pixel_rain": true,
+            "pixel_flow": true,
+            "pixel_fractal": true,
             "typing_heatmap": true,
             "digital_rain": true,
             "solid_reactive_simple": true,
