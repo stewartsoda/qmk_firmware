@@ -25,11 +25,13 @@
 #define BLE_HID_REPORT_TYPE_ALL_KEY     0x5
 
 enum {
-    BT_CHN1,
+    BT_CHN1 = SAFE_RANGE,
     BT_CHN2,
     BT_CHN3,
+    DB_ADC,
 	NEW_SAFE_RANGE
 };
 
 #define NORMAL_LED_FLAG_BIT    (LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER)
 
+void read_ADC_pins(int loops);

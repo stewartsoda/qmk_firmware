@@ -22,6 +22,8 @@
 #include "k715_pro.h"
 #include "btspi.h"
 
+#include "analog.h"
+
 const is31fl3733_led_t PROGMEM g_is31fl3733_leds[IS31FL3733_LED_COUNT] =
 {
     {0, SW7_CS1,    SW9_CS1,    SW8_CS1},
@@ -158,6 +160,58 @@ static void k715_send_keyboard(report_keyboard_t *report)
     send_ble_hid_report(BLE_HID_REPORT_TYPE_NORMAL_KEY, raw_data, KEYBOARD_REPORT_KEYS + 2);
 }
 
+void read_ADC_pins(int loops)
+{
+    uint16_t PC0, PC1, PC2, PC3;
+    for(int i = 0; i < loops; i++)
+    {
+        PC0 = analogReadPin(C0);
+        PC1 = analogReadPin(C1);
+        PC2 = analogReadPin(C2);
+        PC3 = analogReadPin(C3);
+        uprintf("PC0=0x%04X, PC1=0x%04X, PC2=0x%04X, PC3=0x%04X, PC0=%d, PC1=%d, PC2=%d, PC3=%d\n", PC0, PC1, PC2, PC3, PC0, PC1, PC2, PC3);
+    }
+}
+
+bool dip_switch_update_kb(uint8_t index, bool active) {
+    uprintf("dip_switch_update_kb: index=%d, active=%d\n", index, active);
+    read_ADC_pins(1);
+    switch (index) {
+        case 0:
+            uprintf("BT MODE ");
+            if (active) {
+                uprintf("ON\n");
+            } else {
+                uprintf("OFF\n");
+            }
+            break;
+        case 1:
+            uprintf("USB MODE ");
+            if (active) {
+                uprintf("ON\n");
+            } else {
+                uprintf("OFF\n");
+            }
+            break;
+        case 2:
+            if (active) {
+                uprintf("WIN MODE\n");
+            } else {
+                uprintf("MAC MODE\n");
+            }
+            break;
+    }
+    if (active) {
+        uprintf("ON\n");
+    } else {
+        uprintf("OFF\n");
+    }
+    if (!dip_switch_update_user(index, active)) {
+        return false;
+    }
+    return true;
+}
+
 #ifdef NKRO_ENABLE
 static void k715_send_nkro(report_nkro_t *report)
 {
@@ -261,6 +315,7 @@ bool process_record_kb_bt(uint16_t keycode, keyrecord_t *record)
         case BT_CHN3:
             if(is_bt_mode_enabled())
             {
+                uprintf("BT key pressed: kc: 0x%04X\n", keycode);
                 if(record->event.pressed)
                 {
                     chn = keycode - BT_CHN1 + 1;

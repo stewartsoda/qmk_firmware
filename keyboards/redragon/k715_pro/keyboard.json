@@ -14,6 +14,9 @@
             {"pin_a": "B5", "pin_b": "B4"}
         ]
     },
+    "dip_switch": {
+        "pins": ["C14","C13","C12"]
+    },
     "features": {
         "bootmagic": true,
         "console": true,
@@ -145,7 +148,7 @@
     "usb": {
         "device_version": "0.0.1",
         "pid": "0x00D1",
-        "vid": "0x369B", 
+        "vid": "0x369B",
         "no_startup_check": true
     },
     "layout_aliases": {

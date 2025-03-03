@@ -17,11 +17,14 @@
 #include QMK_KEYBOARD_H
 #include "k715_pro.h"
 
+#include "i2c_master.h"
+
 enum layer_names
 {
     _BASE,
     _FnLay,
 };
+
 
 #ifdef ENCODER_MAP_ENABLE
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
@@ -43,8 +46,37 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     EE_CLR,           KC_BRID, KC_BRIU, A(KC_TAB),G(KC_H),G(KC_D), G(KC_S), KC_MPRV, KC_MPLY, KC_MNXT,   KC_MUTE, KC_VOLD, KC_VOLU,          XXXXXXX,
     XXXXXXX, BT_CHN1, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   XXXXXXX, XXXXXXX, XXXXXXX, RGB_MOD,
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_HOME, KC_END,  XXXXXXX, XXXXXXX,
-    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_SCRL,   KC_PSCR,          XXXXXXX, XXXXXXX,
+    XXXXXXX, DB_ADC , XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_SCRL,   KC_PSCR,          XXXXXXX, XXXXXXX,
     XXXXXXX,          XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_PAUS, XXXXXXX, RGB_VAI, XXXXXXX,
     XXXXXXX, XXXXXXX, XXXXXXX,                            RGB_TOG,                   XXXXXXX, _______,   XXXXXXX, RGB_SPD, RGB_VAD, RGB_SPI
     )
 };
+
+void keyboard_post_init_user(void) {
+    // Customise these values to desired behaviour
+    debug_enable=true;
+    // debug_matrix=true;
+    //debug_keyboard=true;
+    //debug_mouse=true;
+  }
+
+  bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+      case DB_ADC:
+        if (record->event.pressed) {
+            read_ADC_pins(1);
+            uprintf("I2C frequency: %d\n", I2C1_CLOCK_SPEED);
+            i2c_status_t result = i2c_ping_address(0xA0, 1000);
+            if (result == I2C_STATUS_SUCCESS) {
+                uprintf("EEPROM found at 0x50\n");
+            } else {
+                uprintf("EEPROM not found at 0x50\n");
+            }
+        } else {
+          // Do something else when release
+        }
+        return false; // Skip all further processing of this key
+      default:
+        return true; // Process all other keycodes normally
+    }
+  }
