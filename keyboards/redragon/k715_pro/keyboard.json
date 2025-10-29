@@ -65,7 +65,7 @@
             "cycle_all": true,
             "cycle_left_right": true,
             "cycle_up_down": true,
-            "rainbow_moving_chevron": true,
+            "rainbow_moving_chevron": true, // very similar to "cycle_left_right"
             "cycle_out_in": true,
             "cycle_out_in_dual": true,
             "cycle_pinwheel": true,

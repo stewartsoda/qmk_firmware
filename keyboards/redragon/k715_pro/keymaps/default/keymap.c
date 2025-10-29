@@ -64,14 +64,41 @@ void keyboard_post_init_user(void) {
     switch (keycode) {
       case DB_ADC:
         if (record->event.pressed) {
-            read_ADC_pins(1);
-            uprintf("I2C frequency: %d\n", I2C1_CLOCK_SPEED);
-            i2c_status_t result = i2c_ping_address(0xA0, 1000);
-            if (result == I2C_STATUS_SUCCESS) {
-                uprintf("EEPROM found at 0x50\n");
-            } else {
-                uprintf("EEPROM not found at 0x50\n");
+            //read_ADC_pins(1);
+            chThdSleepMilliseconds(10);
+            // uprintf("I2C frequency: %d\n", I2C1_CLOCK_SPEED);
+            chThdSleepMilliseconds(10);
+            uprint("Starting I2C scan...\n");
+            chThdSleepMilliseconds(10);
+            for (uint8_t query_dev_addr = 0x50; query_dev_addr <= 0x57; query_dev_addr++) {
+                uprintf("Pinging I2C address 0x%02X...\n", query_dev_addr);
+                chThdSleepMilliseconds(10);
+                i2c_status_t result = i2c_ping_address(query_dev_addr << 1, 1000);
+                if (result == I2C_STATUS_SUCCESS) {
+                    uprint("Device found!\n");
+                } else {
+                    uprintf("Error: %d\n",result);  // -1 is error, -2 is timeout
+                }
+                chThdSleepMilliseconds(10);
+                uint8_t data;
+                uprintf("Reading byte at I2C addr 0x%02X, reg addr 0x00...\n", query_dev_addr);
+                chThdSleepMilliseconds(10);
+                result = i2c_read_register(query_dev_addr << 1, 0x00, &data, 1, 1000);
+                if (result == I2C_STATUS_SUCCESS) {
+                    uprintf("  byte: 0x%02X\n", data);
+                } else {
+                    uprintf("  Error: %d\n",result);
+                }
+                uprintf("Reading byte at I2C add 0x%02X, reg addr 0x0000...\n", query_dev_addr);
+                chThdSleepMilliseconds(10);
+                result = i2c_read_register16(query_dev_addr << 1, 0x00, &data, 1, 1000);
+                if (result == I2C_STATUS_SUCCESS) {
+                    uprintf("  byte: 0x%02X\n", data);
+                } else {
+                    uprintf("  Error: %d\n",result);
+                }
             }
+            uprint("I2C scan complete.\n");
         } else {
           // Do something else when release
         }
