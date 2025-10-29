@@ -20,7 +20,7 @@
 
 void init_set_IS31FL3733_poweron(void)
 {
-    palSetLineMode(IS31FL3733_POWERON_PIN, PAL_MODE_OUTPUT_PUSHPULL);
+    palSetLineMode(IS31FL3733_POWERON_PIN, PAL_MODE_OUTPUT_PUSHPULL);   // BOOT1
     palSetLine(IS31FL3733_POWERON_PIN);
 }
 
@@ -36,15 +36,15 @@ void mcu_reset(void)
 
 void board_init(void)
 {
-    AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_DISABLE;
+    AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_DISABLE;        // disable JTAG/SWD
 
     palSetLineMode(CAPS_LOCK_DRV_PIN, PAL_MODE_OUTPUT_PUSHPULL);
     set_caps_lock_off();
 
-    palSetPadMode(GPIOC, 11, PAL_MODE_INPUT);
-    palSetPadMode(GPIOA, 13, PAL_MODE_OUTPUT_PUSHPULL);
-    palSetPadMode(GPIOA, 14, PAL_MODE_OUTPUT_PUSHPULL);
-    palSetPadMode(GPIOA, 15, PAL_MODE_OUTPUT_PUSHPULL);
+    palSetPadMode(GPIOC, 11, PAL_MODE_INPUT);           // UART4_RX
+    palSetPadMode(GPIOA, 13, PAL_MODE_OUTPUT_PUSHPULL); // JTMS-SWDIO
+    palSetPadMode(GPIOA, 14, PAL_MODE_OUTPUT_PUSHPULL); // JTCK-SWCLK
+    palSetPadMode(GPIOA, 15, PAL_MODE_OUTPUT_PUSHPULL); // JTDI
 
     init_set_IS31FL3733_poweron();
 }

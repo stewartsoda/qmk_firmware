@@ -7,7 +7,7 @@
     },
     "diode_direction": "COL2ROW",
     "dynamic_keymap": {
-        "layer_count": 2
+        "layer_count": 4
     },
     "encoder": {
         "rotary": [
@@ -19,8 +19,16 @@
         "pins": ["C14","C13","C12"]
     },
     "build": {
-        "debounce_type": "sym_eager_pk",
-        "lto": true
+        //"lto": true,
+        "debounce_type": "sym_eager_pk"
+    },
+    "eeprom": {
+        "driver": "wear_leveling",
+        "wear_leveling": {
+            "driver": "embedded_flash",
+            "logical_size": 1024,
+            "backing_size": 4096
+        }
     },
     "features": {
         "bootmagic": true,
@@ -29,7 +37,8 @@
         "extrakey": true,
         "mousekey": true,
         "nkro": false,
-        "rgb_matrix": true
+        "rgb_matrix": true,
+        "debug": true
     },
     "indicators": {
         "caps_lock": "B8",
@@ -49,12 +58,49 @@
             "breathing": true,
             "band_sat": true,
             "band_val": true,
+            "band_pinwheel_sat": true,
+            "band_pinwheel_val": true,
+            "band_spiral_sat": true,
             "band_spiral_val": true,
             "cycle_all": true,
             "cycle_left_right": true,
             "cycle_up_down": true,
+            "rainbow_moving_chevron": true,
+            "cycle_out_in": true,
+            "cycle_out_in_dual": true,
+            "cycle_pinwheel": true,
+            "cycle_spiral": true,
+            "dual_beacon": true,
+            "rainbow_beacdon": true,
+            "rainbow_pinwheels": true,
+            "flower_blooming": true,
+            "raindrops": true,
+            "jellybean_raindrops": true,
+            "hue_breathing": true,
+            "hue_pendulum": true,
             "hue_wave": true,
-            "pixel_flow": true
+            "pixel_rain": true,
+            "pixel_flow": true,
+            "pixel_fractal": true,
+            "typing_heatmap": true,
+            "digital_rain": true,
+            "solid_reactive_simple": true,
+            "solid_reactive": true,
+            "solid_reactive_wide": true,
+            "solid_reactive_multiwide": true,
+            "solid_reactive_cross": true,
+            "solid_reactive_multicross": true,
+            "solid_reactive_nexus": true,
+            "solid_reactive_multinexus": true,
+            "splash": true,
+            "multisplash": true,
+            "solid_splash": true,
+            "solid_multisplash": true,
+            "starlight_smooth": true,
+            "starlight": true,
+            "starlight_dual_sat": true,
+            "starlight_dual_hue": true,
+            "riverflow": true
         },
         "driver": "is31fl3733",
         "layout": [
