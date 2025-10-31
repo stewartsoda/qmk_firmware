@@ -370,7 +370,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max){
 
     if (led_min <= 89 && led_max >= 88) {
         if (host_keyboard_led_state().num_lock) {
-            rgb_matrix_set_color(88, 255,0,255);  // "M" indicator
+            rgb_matrix_set_color(88, 255,0,0);  // "M" indicator
         } else {
             rgb_matrix_set_color(88, 0,0,0);  // "M" indicator
         }

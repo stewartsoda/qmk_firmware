@@ -33,6 +33,53 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
 };
 #endif
 
+/*
+       ┌───┐   ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐ ┌───┐
+       │Esc│   │ F1│ F2│ F3│ F4│ │ F5│ F6│ F7│ F8│ │ F9│F10│F11│F12│ │Kn.│
+       ├───┼───┼───┼───┼───┼───┼─┴─┬─┴─┬─┴─┬─┴─┬─┴─┼───┼───┼───┴───┤ ├───┤
+       │ ` │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ 0 │ - │ = │ Bakspc│ │Ins│
+       ├───┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─────┤*├───┤
+       │ Tab │ q │ w │ e │ r │ t │ y │ u │ i │ o │ p │ [ │ ] │  \  │*│Del│
+       ├─────┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴─────┤*├───┤
+       │ Caps │ a │ s │ d │ f │ g │ h │ j │ k │ l │ ; │ ' │  Enter │ │PgU│
+       ├──────┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴────┬┬──┴┐├───┤
+       │ LShift │ z │ x │ c │ v │ b │ n │ m │ , │ . │ / │ RSft ││ ↑ ││PgD│
+       ├────┬───┴┬──┴─┬─┴───┴───┴───┴───┴───┴──┬┴──┬┴──┬┴──┬┬──┴┼───┼┴──┬┘
+       │LCrl│GUI │LAlt│         Space          │RAt│Fn │RCl││ ← │ ↓ │ → │
+       └────┴────┴────┴────────────────────────┴───┴───┴───┘└───┴───┴───┘
+key(col)
+
+       ┌───┐   ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐ ┌───┐
+R0     │ 0 │   │ 2 │ 3 │ 4 │ 5 │ │ 6 │ 7 │ 8 │ 9 │ │ 10│ 11│ 12│ 13│ │ 15│
+       ├───┼───┼───┼───┼───┼───┼─┴─┬─┴─┬─┴─┬─┴─┬─┴─┼───┼───┼───┴───┤ ├───┤
+R1     │ 0 │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ 10│ 11│ 12│   13  │ │ 14│
+       ├───┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─────┤*├───┤
+R2     │  0  │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ 10│ 11│ 12│  13 │*│ 14│
+       ├─────┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴─────┤*├───┤
+R3     │   0  │ 1 │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ 10│ 11│   13   │ │ 14│
+       ├──────┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴────┬┬──┴┐├───┤
+R4     │    0   │ 2 │ 3 │ 4 │ 5 │ 6 │ 7 │ 8 │ 9 │ 10│ 11│  12  ││ 13││ 14│
+       ├────┬───┴┬──┴─┬─┴───┴───┴───┴───┴───┴──┬┴──┬┴──┬┴──┬┬──┴┼───┼┴──┬┘
+R5     │  0 │  1 │  2 │           6            │ 9 │ 10│ 11││ 12│ 13│ 14│
+       └────┴────┴────┴────────────────────────┴───┴───┴───┘└───┴───┴───┘
+
+
+LED Index
+       ┌───┐   ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐ ┌───┬───┬───┬───┐ ┌───┐
+R0     │ 0 │   │ 1 │ 2 │ 3 │ 4 │ │ 5 │ 6 │ 7 │ 8 │ │ 9 │ 10│ 11│ 12│ │X13│  <-- No LED in index 13
+       ├───┼───┼───┼───┼───┼───┼─┴─┬─┴─┬─┴─┬─┴─┬─┴─┼───┼───┼───┴───┤ ├───┤
+R1     │ 14│ 15│ 16│ 17│ 18│ 19│ 20│ 21│ 22│ 23│ 24│ 25│ 26│   27  │ │ 28│
+       ├───┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─────┤*├───┤  <-- Tied to B8 ("A" indicator - Caps)
+R2     │  29 │ 30│ 31│ 32│ 33│ 34│ 35│ 36│ 37│ 38│ 39│ 40│ 41│  42 │*│ 43│  <-- 88 ("M" indicator)
+       ├─────┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴┬──┴─────┤*├───┤  <-- 89 (Bat indicator)
+R3     │  44  │ 45│ 46│ 47│ 48│ 49│ 50│ 51│ 52│ 53│ 54│ 55│ 56 *57 │ │ 58│  <-- Note that "Enter" has two LEDs, 56+57, 57 is the key-associated LED
+       ├──────┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴─┬─┴────┬┬──┴┐├───┤
+R4     │ *59 60 │ 61│ 62│ 63│ 64│ 65│ 66│ 67│ 68│ 69│ 70│  71  ││ 72││ 73│  <-- Note that "LShift" has two LEDs, 59+60, 59 is teh key-associated LED
+       ├────┬───┴┬──┴─┬─┴───┴───┴───┴───┴───┴──┬┴──┬┴──┬┴──┬┬──┴┼───┼┴──┬┘
+R5     │ 74 │ 75 │ 76 │ 77   78  *79*  80  81  │ 82│ 83│ 84││ 85│ 86│ 87│   <-- Note that "Space" has 5 LEDs
+       └────┴────┴────┴────────────────────────┴───┴───┴───┘└───┴───┴───┘       The LED in index 79 is the center/associated with the key in the matrix
+*/
+
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT(
     KC_ESC,           KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,  KC_F6,   KC_F7,   KC_F8,   KC_F9,      KC_F10,  KC_F11,  KC_F12,            KC_MUTE,
@@ -134,10 +181,16 @@ bool shutdown_user(bool jump_to_bootloader) {
     return false;
 }
 
-bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+  bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+//  Set caps lock LED to RED
+    if (host_keyboard_led_state().caps_lock) {
+        rgb_matrix_set_color(44, 255,0,0); // assuming caps lock is at index 44
+    }
     if (get_highest_layer(layer_state) > 0) {
         uint8_t layer = get_highest_layer(layer_state);
-
+        bool space_affected = false;
+        bool lshift_affected = false;
+        bool enter_affected = false;
         for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
             for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
                 uint8_t index = g_led_config.matrix_co[row][col];
@@ -145,9 +198,43 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
                 if (index >= led_min && index < led_max && index != NO_LED &&
                 keymap_key_to_keycode(layer, (keypos_t){col,row}) > KC_TRNS) {
                     rgb_matrix_set_color(index, RGB_GREEN);
+                    if (index == 79)  {
+                        space_affected = true;
+                    }
+                    if (index == 57) {
+                        enter_affected = true;
+                    }
+                    if (index == 59) {
+                        lshift_affected = true;
+                    }
                 }
+                else {
+                    rgb_matrix_set_color(index, RGB_RED);
+                }
+            }
+            if (space_affected) {
+                    rgb_matrix_set_color(77, RGB_GREEN);
+                    rgb_matrix_set_color(78, RGB_GREEN);
+                    rgb_matrix_set_color(80, RGB_GREEN);
+                    rgb_matrix_set_color(81, RGB_GREEN);
+            }
+            else {
+                    rgb_matrix_set_color(77, RGB_RED);
+                    rgb_matrix_set_color(78, RGB_RED);
+                    rgb_matrix_set_color(80, RGB_RED);
+                    rgb_matrix_set_color(81, RGB_RED);
+            }
+            if (lshift_affected) {
+                rgb_matrix_set_color(60, RGB_GREEN);
+            } else {
+                rgb_matrix_set_color(60, RGB_RED);
+            }
+            if (enter_affected) {
+                rgb_matrix_set_color(56, RGB_GREEN);
+            } else {
+                rgb_matrix_set_color(56, RGB_RED);
             }
         }
     }
-    return false;   // don't continue running the keyboard-level callback
+    return true;   // continue running the keyboard-level callback
 }
