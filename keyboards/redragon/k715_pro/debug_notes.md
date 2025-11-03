@@ -1,12 +1,74 @@
-Observations:
+# K715 Pro Debug Notes
 
-Putput from DEBUG MODE while in BT mode:
+# Hardware Information
+
+### Chip Information
+
+#### Main MCU
+
+STM32F103RCT6 - STM High-density performance line Cortex-M3 microcontroller
+* 256KB flash
+* 48KB SRAM
+* 5 USARTs
+* 4 general-purpose 16-bit timers, 2 advanced-control PWM timers, 2 basic timers
+* 3 ADCs, 2 DACs
+* USB, CAN support
+* LQFP64 package
+
+Datasheet link: https://www.st.com/resource/en/datasheet/stm32f103rc.pdf
+
+Note: The default configuration for this board/chip/bootloader in QMK uses STM32F103xB, which is a lower-spec chip with less peripherals and more importantly, less flash (64 kB) and SRAM (20 kB). A better option is the STM32F103xE, which is the same as the STM32F103xC, but has more flash (512 kB) and SRAM (64 kB). The following lines in ```board.h``` and the custom ld script referenced in ```rules.mk``` correct this issue.
+
+board.h:
+```
+#undef STM32F103xB
+#define STM32F103xE
+``` 
+
+rules.mk:
+```
+MCU_LDSCRIPT = STM32F103xC_stm32duino
+```
+
+#### Bluetooth Processor
+
+FR5082DM Bluetooth SoC
+* Integrated RF, CODEC, PMU, Baseband, Cortex-M3 CPU, and audio DSP
+* 1 MB flash for Cortex M3
+* QSPI interface with STM MCU
+
+#### LED Drivers
+
+IS31FL3723 12x16 dots matrix LED driver
+* 2 on the board
+* Can drive up to 64 RGB LEDs each
+* 1 MHz I2C interface
+* Appears pin-compatible with IS31FL3733, which driver QMK uses for this chip.
+
+Datasheet link: https://www.lumissil.com/assets/pdf/core/IS31FL3723_DS.pdf
+
+#### Flash Chip
+
+FT24C512A 64 kB two-wire serial EEPROM
+* 1 MHz I2C interface
+* Typically 1,000,000 program-erase cycles
+
+Datasheet link: https://datasheet.lcsc.com/lcsc/1912111437_FMD-Fremont-Micro-Devices-FT24C512A-ESR-B_C417376.pdf
+
+Note: This isn't configured in the base Redragon QMK source. I can't get it to respond with an I2C scan of the I2C bus that the LED drivers use, either. There is a chance that it is on I2C2, which would require custom code to communicate with.
+
+# Stock Firmware Investigation
+
+### Output from HID Console 
 
 * Pressing the DEBUG key:
+```
 DEBUG: disabled.
 DEBUG: enabled.
+```
 
 * Pressing the "speed up RGB" key:
+```
 rgb matrix set speed [EEPROM]: 255
 [01045892]led_blink_start(1045892):led 2, 12, (250,250), 3, 0
 rgb matrix set speed [EEPROM]: 255
@@ -14,8 +76,10 @@ rgb matrix set speed [EEPROM]: 255
 rgb matrix set speed [EEPROM]: 255
 [01046614]led_blink_start(1046614):led 2, 12, (250,250), 3, 0
 [01048159]led_set(1048159):stop led 2, 12, 0
+```
 
 * Holding down the knob button, then turning:
+```
 [01171758]led_blink_start(1171758):led 2, 11, (300,300), 2, 0
 [01171758]encoder switch,mode=1
 [01173007]led_set(1173007):stop led 2, 11, 0
@@ -25,8 +89,10 @@ rgb matrix set speed [EEPROM]: 255
 [01179548]clockwise=1,layer=0
 [01179548]led_blink_start(1179548):led 2, 12, (250,250), 3, 0
 [01181057]led_set(1181057):stop led 2, 12, 0
+```
 
 * A bunch of presses while in that mode:
+```
 [01228928]encoder short press,mode=1
 rgb matrix mode [EEPROM]: 11
 [01232098]encoder short press,mode=1
@@ -53,13 +119,17 @@ rgb matrix mode [EEPROM]: 8
 rgb matrix mode [EEPROM]: 9
 [01240684]encoder short press,mode=1
 rgb matrix mode [EEPROM]: 10
+```
 
 * Holding down the button again to get out of that mode:
+```
 [01293466]led_blink_start(1293466):led 2, 11, (300,300), 2, 0
 [01293466]encoder switch,mode=0
 [01294710]led_set(1294710):stop led 2, 11, 0
+```
 
 * Holding down FN+3 to switch BT modes:
+```
 [01293466]led_blink_start(1293466):led 2, 11, (300,300), 2, 0
 [01293466]encoder switch,mode=0
 [01294710]led_set(1294710):stop led 2, 11, 0
@@ -72,8 +142,10 @@ rgb matrix mode [EEPROM]: 10
 [01352238]disconnect:1411042,1352238,1,0
 [01352238]bt pair again
 [01352239]send pair...
+```
 
 * Tap FN+1 to go back to paired with this PC:
+```
 [01381235]set bt_chn:1
 [01381235]led_blink_start(1381235):led 0, 1, (500,500), 60, 88
 [01381236]send reconn...
@@ -83,8 +155,10 @@ rgb matrix mode [EEPROM]: 10
 [01381512]spi rd 0x51-dump 12 Bytes
 01 02 00 00 00 FF 00 00 00 00 00 FF
 [01381513]bt connected:0x01,chn:1
+```
 
 * Encoder things - turn one clockwise then one counterclockwise:
+```
 [01432518]clockwise=1,layer=0
 [01432518]BLE extra rpt,size=3,id=4
 [01432518]rpt_extra-dump 3 Bytes
@@ -99,8 +173,11 @@ rgb matrix mode [EEPROM]: 10
 [01434509]BLE extra rpt,size=3,id=4
 [01434510]rpt_extra-dump 3 Bytes
 04 00 00
+```
 
-* Switch to BT #2 where other computer is connected, pairing failed, try pairing again, then switch back to BT #1:
+* Switch to BT #2 where other computer is connected, pairing failed, try pairing again, then switch back to 
+BT #1:
+```
 [01541128]set bt_chn:2
 [01541128]led_blink_start(1541128):led 0, 2, (250,250), 120, 88
 [01541129]send pair...
@@ -141,34 +218,46 @@ rgb matrix mode [EEPROM]: 10
 [01681960]spi rd 0x51-dump 12 Bytes
 01 02 00 00 00 FF 00 00 00 00 00 FF
 [01681960]bt connected:0x03,chn:1
+```
 
 * Mac/Win switch, switch from Win to Mac and back:
+```
 [01728967]now OS:MAC
 [01731186]now OS:WIN
+```
 
 * FN+SPACE to toggle backlight:
+```
 [01968745]RGB_TOG flag:0x5->0x0
 rgb matrix set speed [EEPROM]: 0
 [01971070]RGB_TOG flag:0x0->0x5
 rgb matrix set speed [EEPROM]: 5
+```
 
 * FN+L_ARROW and FN+R_ARROW to speed up and slow down RGB:
+```
 rgb matrix set speed [EEPROM]: 192
 rgb matrix set speed [EEPROM]: 255
 [02068939]led_blink_start(2068939):led 2, 12, (250,250), 3, 0
 [02070458]led_set(2070458):stop led 2, 12, 0
+```
 
 * Here I unplugged to run off battery for a while, I'm trying to capture a battery reading so I need to draw it down a bit... Then I plugged it back in:
+```
 [03059146]ADC:716, VBATT:4160, 4.160, 1-1
 [03067146]send bt batt_level:100
+```
 
 * Unplugged and replugged more quickly:
+```
 Device disconnected.
 Waiting for new device:....
 Listening:
 [03111162]ADC:716, VBATT:4160, 4.160, 1-1
+```
 
 * Hit CAPS a couple of times:
+```
 [03153071]spi rd 0x51-dump 12 Bytes
 03 02 00 00 00 FF 00 00 00 00 00 FF
 [03153071]bt connected:0x03,chn:1
@@ -181,6 +270,7 @@ Listening:
 [03161425]spi rd 0x51-dump 12 Bytes
 01 02 00 00 00 FF 00 00 00 00 00 FF
 [03161426]bt connected:0x03,chn:1
+```
 
 * Battery indicator light is red under the "M" indicator (which is blue, probably the Mode indicator), and the "A" indicator, which is blank, but goes red when I press CAPS and capslock is on
 

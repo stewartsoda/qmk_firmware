@@ -20,4 +20,4 @@ Flashing example for this keyboard:
 
 See the [build environment setup](https://docs.qmk.fm/#/getting_started_build_tools) and the [make instructions](https://docs.qmk.fm/#/getting_started_make_guide) for more information. Brand new to QMK? Start with our [Complete Newbs Guide](https://docs.qmk.fm/#/newbs).
 
-Note- this firmware is not Redragon official, but a personal fork based on Redragon's released [sources](https://github.com/temp4gh/qmk_firmware/tree/redragon_k715_pro_dev/keyboards/redragon/k715_pro). YMMV, caveat emptor, try at your own risk, etc.
+:warning: **Caution:** this firmware is not Redragon official, but a personal fork based on Redragon's released [sources](https://github.com/temp4gh/qmk_firmware/tree/redragon_k715_pro_dev/keyboards/redragon/k715_pro). YMMV, caveat emptor, try at your own risk, etc.
