@@ -68,37 +68,37 @@ void keyboard_post_init_user(void) {
             chThdSleepMilliseconds(10);
             // uprintf("I2C frequency: %d\n", I2C1_CLOCK_SPEED);
             chThdSleepMilliseconds(10);
-            uprint("Starting I2C scan...\n");
+            uprintf("[%08lu] Starting I2C scan...\n", timer_read32());
             chThdSleepMilliseconds(10);
             for (uint8_t query_dev_addr = 0x50; query_dev_addr <= 0x57; query_dev_addr++) {
-                uprintf("Pinging I2C address 0x%02X...\n", query_dev_addr);
+                uprintf("[%08lu] Pinging I2C address 0x%02X...\n", timer_read32(), query_dev_addr);
                 chThdSleepMilliseconds(10);
                 i2c_status_t result = i2c_ping_address(query_dev_addr << 1, 1000);
                 if (result == I2C_STATUS_SUCCESS) {
-                    uprint("Device found!\n");
+                    uprintf("[%08lu] Device found!\n", timer_read32());
                 } else {
-                    uprintf("Error: %d\n",result);  // -1 is error, -2 is timeout
+                    uprintf("[%08lu] Error: %d\n", timer_read32(), result);  // -1 is error, -2 is timeout
                 }
                 chThdSleepMilliseconds(10);
                 uint8_t data;
-                uprintf("Reading byte at I2C addr 0x%02X, reg addr 0x00...\n", query_dev_addr);
+                uprintf("[%08lu] Reading byte at I2C addr 0x%02X, reg addr 0x00...\n", timer_read32(), query_dev_addr);
                 chThdSleepMilliseconds(10);
                 result = i2c_read_register(query_dev_addr << 1, 0x00, &data, 1, 1000);
                 if (result == I2C_STATUS_SUCCESS) {
-                    uprintf("  byte: 0x%02X\n", data);
+                    uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
                 } else {
-                    uprintf("  Error: %d\n",result);
+                    uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
                 }
-                uprintf("Reading byte at I2C add 0x%02X, reg addr 0x0000...\n", query_dev_addr);
+                uprintf("[%08lu] Reading byte at I2C add 0x%02X, reg addr 0x0000...\n", timer_read32(), query_dev_addr);
                 chThdSleepMilliseconds(10);
                 result = i2c_read_register16(query_dev_addr << 1, 0x00, &data, 1, 1000);
                 if (result == I2C_STATUS_SUCCESS) {
-                    uprintf("  byte: 0x%02X\n", data);
+                    uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
                 } else {
-                    uprintf("  Error: %d\n",result);
+                    uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
                 }
             }
-            uprint("I2C scan complete.\n");
+            uprintf("[%08lu] I2C scan complete.\n", timer_read32());
         } else {
           // Do something else when release
         }
@@ -108,7 +108,33 @@ void keyboard_post_init_user(void) {
     }
   }
 
-  bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+  void suspend_power_down_user(void) {
+    // code will run multiple times while keyboard is suspended
+    uprintf("[%08lu] Going to sleep\n", timer_read32());
+}
+
+void suspend_wakeup_init_user(void) {
+    // code will run on keyboard wakeup
+    uprintf("[%08lu] Waking up\n", timer_read32());
+}
+
+bool shutdown_user(bool jump_to_bootloader) {
+    if (jump_to_bootloader) {
+        // red for bootloader
+        rgb_matrix_set_color_all(RGB_RED);
+        uprintf("[%08lu] Jumping to bootloader\n", timer_read32());
+    } else {
+        // off for soft reset
+        rgb_matrix_set_color_all(RGB_OFF);
+        uprintf("[%08lu] Soft reset\n", timer_read32());
+    }
+    // force flushing -- otherwise will never happen
+    rgb_matrix_update_pwm_buffers();
+    // false to not process kb level
+    return false;
+}
+
+bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (get_highest_layer(layer_state) > 0) {
         uint8_t layer = get_highest_layer(layer_state);
 

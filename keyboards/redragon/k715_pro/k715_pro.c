@@ -169,16 +169,22 @@ void read_ADC_pins(int loops)
         PC1 = analogReadPin(C1);
         PC2 = analogReadPin(C2);
         PC3 = analogReadPin(C3);
-        uprintf("PC0=0x%04X, PC1=0x%04X, PC2=0x%04X, PC3=0x%04X, PC0=%d, PC1=%d, PC2=%d, PC3=%d\n", PC0, PC1, PC2, PC3, PC0, PC1, PC2, PC3);
+        uprintf("[%08lu] PC0=0x%04X, PC1=0x%04X, PC2=0x%04X, PC3=0x%04X, PC0=%d, PC1=%d, PC2=%d, PC3=%d\n", timer_read32(), PC0, PC1, PC2, PC3, PC0, PC1, PC2, PC3);
+        PC0 = analogReadPinAdc(C0, 0);
+        PC1 = analogReadPinAdc(C1, 0);
+        PC2 = analogReadPinAdc(C2, 0);
+        PC3 = analogReadPinAdc(C3, 0);
+        uprintf("[%08lu] PC0=0x%04X, PC1=0x%04X, PC2=0x%04X, PC3=0x%04X, PC0=%d, PC1=%d, PC2=%d, PC3=%d\n", timer_read32(), PC0, PC1, PC2, PC3, PC0, PC1, PC2, PC3);
+
     }
 }
 
 bool dip_switch_update_kb(uint8_t index, bool active) {
-    uprintf("dip_switch_update_kb: index=%d, active=%d\n", index, active);
+    uprintf("[%08lu] dip_switch_update_kb: index=%d, active=%d\n", timer_read32(), index, active);
     read_ADC_pins(1);
     switch (index) {
         case 0:
-            uprintf("BT MODE ");
+            uprintf("[%08lu] BT MODE ", timer_read32());
             if (active) {
                 uprintf("ON\n");
             } else {
@@ -186,7 +192,7 @@ bool dip_switch_update_kb(uint8_t index, bool active) {
             }
             break;
         case 1:
-            uprintf("USB MODE ");
+            uprintf("[%08lu] USB MODE ", timer_read32());
             if (active) {
                 uprintf("ON\n");
             } else {
@@ -195,9 +201,9 @@ bool dip_switch_update_kb(uint8_t index, bool active) {
             break;
         case 2:
             if (active) {
-                uprintf("WIN MODE\n");
+                uprintf("[%08lu] WIN MODE\n", timer_read32());
             } else {
-                uprintf("MAC MODE\n");
+                uprintf("[%08lu] MAC MODE\n", timer_read32());
             }
             break;
     }
@@ -315,7 +321,7 @@ bool process_record_kb_bt(uint16_t keycode, keyrecord_t *record)
         case BT_CHN3:
             if(is_bt_mode_enabled())
             {
-                uprintf("BT key pressed: kc: 0x%04X\n", keycode);
+                uprintf("[%08lu] BT key pressed: kc: 0x%04X\n", timer_read32(), keycode);
                 if(record->event.pressed)
                 {
                     chn = keycode - BT_CHN1 + 1;
