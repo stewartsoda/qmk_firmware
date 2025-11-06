@@ -38,7 +38,12 @@
         "mousekey": true,
         "nkro": false,
         "rgb_matrix": true,
-        "debug": true
+        "debug": true,
+        "battery": true
+    },
+    "battery": {
+        "driver": "custom",
+        "sample_interval": 5000
     },
     "indicators": {
         "caps_lock": "B8",

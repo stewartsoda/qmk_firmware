@@ -60,6 +60,26 @@ Note: This isn't configured in the base Redragon QMK source. I can't get it to r
 
 ## Stock Firmware Investigation
 
+### Battery Calculations
+
+I found the floating point code at [this github link.](https://github.com/MrMatch246/rAIversingEvaluation/blob/ebac6d2aa76a4db68263c19291353b50db1140dc/gpt-3.5-turbo/p2im_maj_full_v1_1/extraction/Robot/Robot_original.c#L1159)
+
+Descriptions of the functions are [in the GCC documentation.](https://gcc.gnu.org/onlinedocs/gccint/Soft-float-library-routines.html)
+
+The get_battery_voltage function at 0x08005d90 does the following:
+
+1. Read the ADC1 V<sub>REFINT</sub> voltage
+2. Read the V<sub>BATT</sub> voltage (from pin C0, I think)
+3. Convert the V<sub>BATT</sub> voltage to a float V<sub>BATT<sub>float</sub></sub>
+4. Multiply V<sub>BATT<sub>float</sub></sub> by 1.2
+5. Convert the V<sub>REFINT</sub> to a float V<sub>REFINT<sub>float</sub></sub>
+6. Divide V<sub>BATT<sub>float</sub></sub> by V<sub>REFINT<sub>float</sub></sub>
+7. Multiply the result of that division by 1000
+8. Add the result of that multiplication to itself
+9. Convert the result of that addition back to an int
+10. Mask off the upper 16 bits so only 16 bits remain
+
+
 ### Output from HID Console
 
 * Pressing the DEBUG key:
