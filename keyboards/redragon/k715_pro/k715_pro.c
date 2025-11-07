@@ -160,8 +160,10 @@ static void k715_send_keyboard(report_keyboard_t *report)
     send_ble_hid_report(BLE_HID_REPORT_TYPE_NORMAL_KEY, raw_data, KEYBOARD_REPORT_KEYS + 2);
 }
 
-void read_ADC_pins(int loops)
+void adc_debug(int loops)
 {
+    //uint16_t battery_driver_get_mv(void)
+    battery_driver_sample_percent();
     uint16_t PC0, PC1, PC2, PC3;
     for(int i = 0; i < loops; i++)
     {
@@ -181,7 +183,7 @@ void read_ADC_pins(int loops)
 
 bool dip_switch_update_kb(uint8_t index, bool active) {
     uprintf("[%08lu] dip_switch_update_kb: index=%d, active=%d\n", timer_read32(), index, active);
-    read_ADC_pins(1);
+    adc_debug(1);
     switch (index) {
         case 0:
             uprintf("[%08lu] BT MODE ", timer_read32());

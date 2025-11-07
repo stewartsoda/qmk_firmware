@@ -111,41 +111,41 @@ void keyboard_post_init_user(void) {
     switch (keycode) {
       case DB_ADC:
         if (record->event.pressed) {
-            //read_ADC_pins(1);
-            chThdSleepMilliseconds(10);
-            // uprintf("I2C frequency: %d\n", I2C1_CLOCK_SPEED);
-            chThdSleepMilliseconds(10);
-            uprintf("[%08lu] Starting I2C scan...\n", timer_read32());
-            chThdSleepMilliseconds(10);
-            for (uint8_t query_dev_addr = 0x50; query_dev_addr <= 0x57; query_dev_addr++) {
-                uprintf("[%08lu] Pinging I2C address 0x%02X...\n", timer_read32(), query_dev_addr);
-                chThdSleepMilliseconds(10);
-                i2c_status_t result = i2c_ping_address(query_dev_addr << 1, 1000);
-                if (result == I2C_STATUS_SUCCESS) {
-                    uprintf("[%08lu] Device found!\n", timer_read32());
-                } else {
-                    uprintf("[%08lu] Error: %d\n", timer_read32(), result);  // -1 is error, -2 is timeout
-                }
-                chThdSleepMilliseconds(10);
-                uint8_t data;
-                uprintf("[%08lu] Reading byte at I2C addr 0x%02X, reg addr 0x00...\n", timer_read32(), query_dev_addr);
-                chThdSleepMilliseconds(10);
-                result = i2c_read_register(query_dev_addr << 1, 0x00, &data, 1, 1000);
-                if (result == I2C_STATUS_SUCCESS) {
-                    uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
-                } else {
-                    uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
-                }
-                uprintf("[%08lu] Reading byte at I2C add 0x%02X, reg addr 0x0000...\n", timer_read32(), query_dev_addr);
-                chThdSleepMilliseconds(10);
-                result = i2c_read_register16(query_dev_addr << 1, 0x00, &data, 1, 1000);
-                if (result == I2C_STATUS_SUCCESS) {
-                    uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
-                } else {
-                    uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
-                }
-            }
-            uprintf("[%08lu] I2C scan complete.\n", timer_read32());
+            adc_debug(1);
+            // chThdSleepMilliseconds(10);
+            // // uprintf("I2C frequency: %d\n", I2C1_CLOCK_SPEED);
+            // chThdSleepMilliseconds(10);
+            // uprintf("[%08lu] Starting I2C scan...\n", timer_read32());
+            // chThdSleepMilliseconds(10);
+            // for (uint8_t query_dev_addr = 0x50; query_dev_addr <= 0x57; query_dev_addr++) {
+            //     uprintf("[%08lu] Pinging I2C address 0x%02X...\n", timer_read32(), query_dev_addr);
+            //     chThdSleepMilliseconds(10);
+            //     i2c_status_t result = i2c_ping_address(query_dev_addr << 1, 1000);
+            //     if (result == I2C_STATUS_SUCCESS) {
+            //         uprintf("[%08lu] Device found!\n", timer_read32());
+            //     } else {
+            //         uprintf("[%08lu] Error: %d\n", timer_read32(), result);  // -1 is error, -2 is timeout
+            //     }
+            //     chThdSleepMilliseconds(10);
+            //     uint8_t data;
+            //     uprintf("[%08lu] Reading byte at I2C addr 0x%02X, reg addr 0x00...\n", timer_read32(), query_dev_addr);
+            //     chThdSleepMilliseconds(10);
+            //     result = i2c_read_register(query_dev_addr << 1, 0x00, &data, 1, 1000);
+            //     if (result == I2C_STATUS_SUCCESS) {
+            //         uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
+            //     } else {
+            //         uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
+            //     }
+            //     uprintf("[%08lu] Reading byte at I2C add 0x%02X, reg addr 0x0000...\n", timer_read32(), query_dev_addr);
+            //     chThdSleepMilliseconds(10);
+            //     result = i2c_read_register16(query_dev_addr << 1, 0x00, &data, 1, 1000);
+            //     if (result == I2C_STATUS_SUCCESS) {
+            //         uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
+            //     } else {
+            //         uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
+            //     }
+            // }
+            // uprintf("[%08lu] I2C scan complete.\n", timer_read32());
         } else {
           // Do something else when release
         }

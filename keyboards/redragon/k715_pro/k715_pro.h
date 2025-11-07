@@ -17,6 +17,7 @@
 #pragma once
 
 #include "quantum.h"
+#include "battery_driver.h"
 
 #define BLE_HID_REPORT_TYPE_NORMAL_KEY  0x1
 #define BLE_HID_REPORT_TYPE_MOUSE_KEY   0x2
@@ -34,4 +35,4 @@ enum {
 
 #define NORMAL_LED_FLAG_BIT    (LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER)
 
-void read_ADC_pins(int loops);
+void adc_debug(int loops);
