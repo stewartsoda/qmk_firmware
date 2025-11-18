@@ -23,6 +23,7 @@
 #include "btspi.h"
 
 #include "analog.h"
+#include "gpio.h"
 
 const is31fl3733_led_t PROGMEM g_is31fl3733_leds[IS31FL3733_LED_COUNT] =
 {
@@ -160,27 +161,49 @@ static void k715_send_keyboard(report_keyboard_t *report)
     send_ble_hid_report(BLE_HID_REPORT_TYPE_NORMAL_KEY, raw_data, KEYBOARD_REPORT_KEYS + 2);
 }
 
+void get_temp_sensor_value(void) {
+    static adcsample_t samples[2];
+    static const ADCConversionGroup adcgrpcfg = {
+        FALSE,
+        2,
+        NULL,
+        NULL,
+        0, ADC_CR2_TSVREFE,           /* CR1, CR2 */
+        ADC_SMPR1_SMP_AN10(ADC_SAMPLE_28P5) | ADC_SMPR1_SMP_VREF(ADC_SAMPLE_239P5),
+        0,                            /* SMPR2 */
+        ADC_SQR1_NUM_CH(2),
+        0,
+        ADC_SQR3_SQ2_N(ADC_CHANNEL_VREFINT)   | ADC_SQR3_SQ1_N(ADC_CHANNEL_SENSOR)
+    };
+
+    adcStart(&ADCD1, NULL);
+
+    adcConvert(&ADCD1, &adcgrpcfg, samples, 2);
+
+    dprintf("[%08lu] samples: [SENSOR,VREFINT]\n", timer_read32());
+    dprintf("[%08lu] samples: [0x%04x, 0x%04x]\n", timer_read32(), samples[0], samples[1]);
+
+    //temp sensor calc:
+    //temp_in_C = (V25-Vsense)/avg_slope +25
+    //temp_c = (1.43 - vsense)/4.3 + 25
+    //temp_c = (1430 - (vsense * 1200)/vrefint)/4300 + 25
+    int temperature = (1430 - (samples[0] * 1200)/samples[1])/4300 + 25;
+    dprintf("[%08lu] Temperature: %d C\n", timer_read32(), temperature);
+
+}
+
 void adc_debug(int loops)
 {
-    //uint16_t battery_driver_get_mv(void)
-
     // want to read pin C15
-    uint8_t PC15 = digitalReadPin(C15);
-    uprintf("[%08lu] PC15=%d\n", timer_read32(), PC15);
+    uint8_t PC15 = gpio_read_pin(USB_POWER_PIN);
+    uprintf("[%08lu] USB Power PinPC15=%d\n", timer_read32(), PC15);
 
     // want to read pin C1
-    uint8_t PC1 = digitalReadPin(C1);
-    uprintf("[%08lu] PC1=%d\n", timer_read32(), PC1);
-
+    uint8_t PC1 = gpio_read_pin(BATTERY_CHARGING_PIN);
+    uprintf("[%08lu] Battery Charging Pin PC1=%d\n", timer_read32(), PC1);
 
     battery_driver_sample_percent();
-    uint16_t PC0, PC1, PC2, PC3;
-    for(int i = 0; i < loops; i++)
-    {
-        PC0 = analogReadPin(C0);
-        PC2 = analogReadPin(C2);
-        uprintf("[%08lu] PC0=0x%04X, PC1=0x%04X, PC2=0x%04X, PC3=0x%04X, PC0=%d, PC1=%d, PC2=%d, PC3=%d\n", timer_read32(), PC0, PC1, PC2, PC3, PC0, PC1, PC2, PC3);
-    }
+    get_temp_sensor_value();
 }
 
 bool dip_switch_update_kb(uint8_t index, bool active) {

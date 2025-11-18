@@ -3,6 +3,7 @@
 #include "gpio.h"
 
 #include "k715_pro.h"
+#include "config.h"
 
 
 void battery_driver_init(void) {
@@ -30,15 +31,42 @@ uint16_t battery_driver_get_mv(void) {
     seed ^= seed << 5;
     value = (uint16_t)(min_mv + (seed % (uint32_t)(max_mv - min_mv + 1)));
 #else
-    adc_mux vrefint_mux = TO_MUX(17, 0);
-    adc_mux vbatt_mux = pinToMux(BATTERY_ADC_PIN);
-    int32_t vrefint_raw = adc_read(vrefint_mux);
-    int32_t vbatt_raw = adc_read(vbatt_mux);
-    value = vbatt_raw * 1200 / vrefint_raw;     // value is in millivolts
-    dprintf("[%08lu] Vbatt_raw: %ld, Vrefint_raw: %ld.\n", timer_read32(), vbatt_raw, vrefint_raw);
+    palSetLineMode((C0), PAL_MODE_INPUT_ANALOG);
+    palSetLineMode((C2), PAL_MODE_INPUT_ANALOG);
+
+    adcStart(&ADCD1, NULL);
+
+    static adcsample_t samples[2];
+    /*
+    [0] = C2
+    [1] = VREFINT
+    */
+
+    static const ADCConversionGroup adcgrpcfg = {
+        FALSE,
+        2,
+        NULL,
+        NULL,
+        0, ADC_CR2_TSVREFE,           /* CR1, CR2 */
+        ADC_SMPR1_SMP_AN10(ADC_SAMPLE_28P5) | ADC_SMPR1_SMP_VREF(ADC_SAMPLE_239P5),
+        0,                            /* SMPR2 */
+        ADC_SQR1_NUM_CH(2),
+        0,
+        ADC_SQR3_SQ2_N(ADC_CHANNEL_VREFINT)   | ADC_SQR3_SQ1_N(ADC_CHANNEL_IN10)
+    };
+
+    adcStart(&ADCD1, NULL);
+
+    adcConvert(&ADCD1, &adcgrpcfg, samples, 2);
+
+    dprintf("[%08lu] samples: [     C2,VREFINT]\n", timer_read32());
+    dprintf("[%08lu] samples: [%6d, %6d]\n", timer_read32(), samples[0], samples[1]);
+    dprintf("[%08lu] samples: [0x%04x, 0x%04x]\n", timer_read32(), samples[0], samples[1]);
+
+    value = samples[0] * 1200 / samples[1];
 #endif
     dprintf("[%08lu] Get battery mV: %d mV.\n", timer_read32(), (int16_t)value);
-    return value;
+    return 0;
 }
 
 
