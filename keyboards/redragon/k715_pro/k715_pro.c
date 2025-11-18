@@ -163,21 +163,23 @@ static void k715_send_keyboard(report_keyboard_t *report)
 void adc_debug(int loops)
 {
     //uint16_t battery_driver_get_mv(void)
+
+    // want to read pin C15
+    uint8_t PC15 = digitalReadPin(C15);
+    uprintf("[%08lu] PC15=%d\n", timer_read32(), PC15);
+
+    // want to read pin C1
+    uint8_t PC1 = digitalReadPin(C1);
+    uprintf("[%08lu] PC1=%d\n", timer_read32(), PC1);
+
+
     battery_driver_sample_percent();
     uint16_t PC0, PC1, PC2, PC3;
     for(int i = 0; i < loops; i++)
     {
         PC0 = analogReadPin(C0);
-        PC1 = analogReadPin(C1);
         PC2 = analogReadPin(C2);
-        PC3 = analogReadPin(C3);
         uprintf("[%08lu] PC0=0x%04X, PC1=0x%04X, PC2=0x%04X, PC3=0x%04X, PC0=%d, PC1=%d, PC2=%d, PC3=%d\n", timer_read32(), PC0, PC1, PC2, PC3, PC0, PC1, PC2, PC3);
-        PC0 = analogReadPinAdc(C0, 0);
-        PC1 = analogReadPinAdc(C1, 0);
-        PC2 = analogReadPinAdc(C2, 0);
-        PC3 = analogReadPinAdc(C3, 0);
-        uprintf("[%08lu] PC0=0x%04X, PC1=0x%04X, PC2=0x%04X, PC3=0x%04X, PC0=%d, PC1=%d, PC2=%d, PC3=%d\n", timer_read32(), PC0, PC1, PC2, PC3, PC0, PC1, PC2, PC3);
-
     }
 }
 

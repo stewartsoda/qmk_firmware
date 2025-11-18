@@ -79,6 +79,15 @@ The get_battery_voltage function at 0x08005d90 does the following:
 9. Convert the result of that addition back to an int
 10. Mask off the upper 16 bits so only 16 bits remain
 
+### Pinout Listing for STM32F103RCT6
+
+|   Pin Name    |   QMK function    |   Alternate Functions |   Notes   |
+|---------------|-------------------|-----------------------|-----------|
+| PA15 | COL15 | JTDI | Gets configured as PAL_MODE_OUTPUT_PUSHPULL in board_init() in btsys.c, disabling JTAG/SWD in normal operation |
+|PA14|COL14|JTCK-SWCLK|Gets configured as PAL_MODE_OUTPUT_PUSHPULL in board_init() in btsys.c, disabling JTAG/SWD in normal operation|
+|PA13|COL13|JTSM-SWDIO|Gets configured as PAL_MODE_OUTPUT_PUSHPULL in board_init() in btsys.c, disabling JTAG/SWD in normal operation|
+
+
 
 ### Output from HID Console
 
