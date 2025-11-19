@@ -97,7 +97,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     EE_CLR,           KC_BRID, KC_BRIU, A(KC_TAB),G(KC_H),G(KC_D), G(KC_S), KC_MPRV, KC_MPLY, KC_MNXT,   KC_MUTE, KC_VOLD, KC_VOLU,          XXXXXXX,
     DB_TOGG, BT_CHN1, BT_CHN2, BT_CHN3, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   XXXXXXX, XXXXXXX, XXXXXXX, RM_NEXT,
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_HOME, KC_END,  XXXXXXX, RM_PREV,
-    KC_NUM , DB_ADC , XXXXXXX, DB_TOGG, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_SCRL,   KC_PSCR,          XXXXXXX, RM_VALU,
+    KC_NUM , DB_KEY , XXXXXXX, DB_TOGG, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_SCRL,   KC_PSCR,          XXXXXXX, RM_VALU,
     XXXXXXX,          XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_PAUS, XXXXXXX, RM_HUEU, RM_VALD,
     XXXXXXX, XXXXXXX, XXXXXXX,                            RM_TOGG,                   XXXXXXX, _______,   XXXXXXX, RM_SPDD, RM_HUED, RM_SPDU
     ),
@@ -113,7 +113,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     EE_CLR,           KC_BRID, KC_BRIU, A(KC_TAB),G(KC_H),G(KC_D), G(KC_S), KC_MPRV, KC_MPLY, KC_MNXT,   KC_MUTE, KC_VOLD, KC_VOLU,          XXXXXXX,
     DB_TOGG, BT_CHN1, BT_CHN2, BT_CHN3, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   XXXXXXX, XXXXXXX, XXXXXXX, RM_NEXT,
     XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_HOME, KC_END,  XXXXXXX, RM_PREV,
-    KC_NUM , DB_ADC , XXXXXXX, DB_TOGG, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_SCRL,   KC_PSCR,          XXXXXXX, RM_VALU,
+    KC_NUM , DB_KEY , XXXXXXX, DB_TOGG, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_SCRL,   KC_PSCR,          XXXXXXX, RM_VALU,
     XXXXXXX,          XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,   KC_PAUS, XXXXXXX, RM_HUEU, RM_VALD,
     XXXXXXX, XXXXXXX, XXXXXXX,                            RM_TOGG,                   XXXXXXX, _______,   XXXXXXX, RM_SPDD, RM_HUED, RM_SPDU
     )
@@ -129,43 +129,9 @@ void keyboard_post_init_user(void) {
 
   bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
-      case DB_ADC:
+      case DB_KEY:  //debug key
         if (record->event.pressed) {
-            adc_debug(1);
-            // chThdSleepMilliseconds(10);
-            // // uprintf("I2C frequency: %d\n", I2C1_CLOCK_SPEED);
-            // chThdSleepMilliseconds(10);
-            // uprintf("[%08lu] Starting I2C scan...\n", timer_read32());
-            // chThdSleepMilliseconds(10);
-            // for (uint8_t query_dev_addr = 0x50; query_dev_addr <= 0x57; query_dev_addr++) {
-            //     uprintf("[%08lu] Pinging I2C address 0x%02X...\n", timer_read32(), query_dev_addr);
-            //     chThdSleepMilliseconds(10);
-            //     i2c_status_t result = i2c_ping_address(query_dev_addr << 1, 1000);
-            //     if (result == I2C_STATUS_SUCCESS) {
-            //         uprintf("[%08lu] Device found!\n", timer_read32());
-            //     } else {
-            //         uprintf("[%08lu] Error: %d\n", timer_read32(), result);  // -1 is error, -2 is timeout
-            //     }
-            //     chThdSleepMilliseconds(10);
-            //     uint8_t data;
-            //     uprintf("[%08lu] Reading byte at I2C addr 0x%02X, reg addr 0x00...\n", timer_read32(), query_dev_addr);
-            //     chThdSleepMilliseconds(10);
-            //     result = i2c_read_register(query_dev_addr << 1, 0x00, &data, 1, 1000);
-            //     if (result == I2C_STATUS_SUCCESS) {
-            //         uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
-            //     } else {
-            //         uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
-            //     }
-            //     uprintf("[%08lu] Reading byte at I2C add 0x%02X, reg addr 0x0000...\n", timer_read32(), query_dev_addr);
-            //     chThdSleepMilliseconds(10);
-            //     result = i2c_read_register16(query_dev_addr << 1, 0x00, &data, 1, 1000);
-            //     if (result == I2C_STATUS_SUCCESS) {
-            //         uprintf("[%08lu]   byte: 0x%02X\n", timer_read32(), data);
-            //     } else {
-            //         uprintf("[%08lu]   Error: %d\n", timer_read32(), result);
-            //     }
-            // }
-            // uprintf("[%08lu] I2C scan complete.\n", timer_read32());
+            debug_method(1);
         } else {
           // Do something else when release
         }
@@ -174,16 +140,6 @@ void keyboard_post_init_user(void) {
         return true; // Process all other keycodes normally
     }
   }
-
-  void suspend_power_down_user(void) {
-    // code will run multiple times while keyboard is suspended
-    uprintf("[%08lu] Going to sleep\n", timer_read32());
-}
-
-void suspend_wakeup_init_user(void) {
-    // code will run on keyboard wakeup
-    uprintf("[%08lu] Waking up\n", timer_read32());
-}
 
 bool shutdown_user(bool jump_to_bootloader) {
     if (jump_to_bootloader) {
@@ -204,57 +160,7 @@ bool shutdown_user(bool jump_to_bootloader) {
   bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 //  Set caps lock LED to RED
     if (host_keyboard_led_state().caps_lock) {
-        rgb_matrix_set_color(44, 255,0,0); // assuming caps lock is at index 44
-    }
-    if (get_highest_layer(layer_state) > 0) {
-        uint8_t layer = get_highest_layer(layer_state);
-        bool space_affected = false;
-        bool lshift_affected = false;
-        bool enter_affected = false;
-        for (uint8_t row = 0; row < MATRIX_ROWS; ++row) {
-            for (uint8_t col = 0; col < MATRIX_COLS; ++col) {
-                uint8_t index = g_led_config.matrix_co[row][col];
-
-                if (index >= led_min && index < led_max && index != NO_LED &&
-                keymap_key_to_keycode(layer, (keypos_t){col,row}) > KC_TRNS) {
-                    rgb_matrix_set_color(index, RGB_GREEN);
-                    if (index == 79)  {
-                        space_affected = true;
-                    }
-                    if (index == 57) {
-                        enter_affected = true;
-                    }
-                    if (index == 59) {
-                        lshift_affected = true;
-                    }
-                }
-                else {
-                    rgb_matrix_set_color(index, RGB_RED);
-                }
-            }
-            if (space_affected) {
-                    rgb_matrix_set_color(77, RGB_GREEN);
-                    rgb_matrix_set_color(78, RGB_GREEN);
-                    rgb_matrix_set_color(80, RGB_GREEN);
-                    rgb_matrix_set_color(81, RGB_GREEN);
-            }
-            else {
-                    rgb_matrix_set_color(77, RGB_RED);
-                    rgb_matrix_set_color(78, RGB_RED);
-                    rgb_matrix_set_color(80, RGB_RED);
-                    rgb_matrix_set_color(81, RGB_RED);
-            }
-            if (lshift_affected) {
-                rgb_matrix_set_color(60, RGB_GREEN);
-            } else {
-                rgb_matrix_set_color(60, RGB_RED);
-            }
-            if (enter_affected) {
-                rgb_matrix_set_color(56, RGB_GREEN);
-            } else {
-                rgb_matrix_set_color(56, RGB_RED);
-            }
-        }
+        rgb_matrix_set_color(44, 255,255,255); // assuming caps lock is at index 44
     }
     return true;   // continue running the keyboard-level callback
 }

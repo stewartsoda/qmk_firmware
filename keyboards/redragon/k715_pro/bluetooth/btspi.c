@@ -23,8 +23,6 @@
 
 #define SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE (0xAAAABBBB)
 
-#define print_log(fmt,...) do{}while(0)
-
 static uint8_t spi_inited = 0;
 static uint8_t last_device_mode = INVALID_DIP_DEVICE_MODE;
 static uint8_t now_mode = KBD_BT_MODE;
@@ -733,8 +731,8 @@ int init_req_bt_ver(void)
         memcpy(bt_fw_verinfo, data, BT_FW_VERINFO_LEN);
         memcpy(bt_mac_addr, &(data[BT_FW_VERINFO_LEN]), 6);
 
-        print_log("BT fw version:%s\r\n", bt_fw_verinfo);
-        print_log("BT addr:%02X:%02X:%02X:%02X:%02X:%02X\r\n", bt_mac_addr[0], bt_mac_addr[1], \
+        dprintf("[%08lu] BT fw version:%s\r\n", timer_read32(), bt_fw_verinfo);
+        dprintf("[%08lu] BT addr:%02X:%02X:%02X:%02X:%02X:%02X\r\n", timer_read32(), bt_mac_addr[0], bt_mac_addr[1], \
                   bt_mac_addr[2], bt_mac_addr[3], \
                   bt_mac_addr[4], bt_mac_addr[5]);
     }
@@ -891,8 +889,8 @@ void ble_spi_slave_cmd_notify(void)
             memcpy(bt_fw_verinfo, rx_data, sizeof(bt_fw_verinfo) - 1);
             memcpy(bt_mac_addr, &(rx_data[offset]), 6);
 
-            print_log("BT fw version:%s\r\n", bt_fw_verinfo);
-            print_log("BT addr:%02X:%02X:%02X:%02X:%02X:%02X\r\n", bt_mac_addr[0], bt_mac_addr[1], \
+            dprintf("[%08lu] BT fw version:%s\r\n", timer_read32(), bt_fw_verinfo);
+            dprintf("[%08lu] BT addr:%02X:%02X:%02X:%02X:%02X:%02X\r\n", timer_read32(), bt_mac_addr[0], bt_mac_addr[1], \
                       bt_mac_addr[2], bt_mac_addr[3], \
                       bt_mac_addr[4], bt_mac_addr[5]);
 

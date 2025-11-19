@@ -29,10 +29,10 @@ enum {
     BT_CHN1 = SAFE_RANGE,
     BT_CHN2,
     BT_CHN3,
-    DB_ADC,
+    DB_KEY,
 	NEW_SAFE_RANGE
 };
 
 #define NORMAL_LED_FLAG_BIT    (LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER)
 
-void adc_debug(int loops);
+void debug_method(int loops);

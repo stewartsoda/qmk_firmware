@@ -40,4 +40,5 @@
 
 #define BATTERY_ADC_PIN C0
 #define BATTERY_CHARGING_PIN C1
-#define USB_POWER_PIN C15
+
+#define USB_VBUS_PIN C15

@@ -13,8 +13,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #pragma once
+
+#define STM32_FLASH_SECTORS_PER_BANK        128 /* Maximum, can be redefined.*/
 
 #include_next <halconf.h>
 

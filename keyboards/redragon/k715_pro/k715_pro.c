@@ -24,6 +24,7 @@
 
 #include "analog.h"
 #include "gpio.h"
+#include "battery.h"
 
 const is31fl3733_led_t PROGMEM g_is31fl3733_leds[IS31FL3733_LED_COUNT] =
 {
@@ -180,8 +181,7 @@ void get_temp_sensor_value(void) {
     adcConvert(&ADCD1, &adcgrpcfg, samples, 2);
     adcStop(&ADCD1);
 
-    dprintf("[%08lu] samples: [SENSOR,VREFINT]\n", timer_read32());
-    dprintf("[%08lu] samples: [0x%04x, 0x%04x]\n", timer_read32(), samples[1], samples[0]);
+    dprintf("[%08lu] ADC_Vtemp=0x%04x, ADC_Vrefint=0x%04x]\n", timer_read32(), samples[1], samples[0]);
 
     //temp sensor calc:
     //temp_in_C = (V25-V_sense)/avg_slope +25
@@ -192,52 +192,28 @@ void get_temp_sensor_value(void) {
     dprintf("[%08lu] Temperature: %d C\n", timer_read32(), temperature);
 }
 
-void adc_debug(int loops)
+void debug_method(int loops)
 {
-    // want to read pin C15
-    uint8_t PC15 = gpio_read_pin(USB_POWER_PIN);
-    uprintf("[%08lu] USB Power PinPC15=%d\n", timer_read32(), PC15);
-
-    // want to read pin C1
+    uint8_t PC15 = gpio_read_pin(USB_VBUS_PIN);
     uint8_t PC1 = gpio_read_pin(BATTERY_CHARGING_PIN);
-    uprintf("[%08lu] Battery Charging Pin PC1=%d\n", timer_read32(), PC1);
+    uprintf("[%08lu] USB Vbus Pin PC15=%d, Battery Charging Pin PC1=%d\n", timer_read32(), PC15, PC1);
 
     battery_driver_sample_percent();
     get_temp_sensor_value();
 }
 
 bool dip_switch_update_kb(uint8_t index, bool active) {
-    uprintf("[%08lu] dip_switch_update_kb: index=%d, active=%d\n", timer_read32(), index, active);
-    adc_debug(1);
+    dprintf("[%08lu] dip_switch_update_kb: index=%d, active=%d\n", timer_read32(), index, active);
     switch (index) {
         case 0:
-            uprintf("[%08lu] BT MODE ", timer_read32());
-            if (active) {
-                uprintf("ON\n");
-            } else {
-                uprintf("OFF\n");
-            }
+            dprintf("[%08lu] BT MODE %s\n", timer_read32(), active ? "ON" : "OFF");
             break;
         case 1:
-            uprintf("[%08lu] USB MODE ", timer_read32());
-            if (active) {
-                uprintf("ON\n");
-            } else {
-                uprintf("OFF\n");
-            }
+            dprintf("[%08lu] USB MODE %s\n", timer_read32(), active ? "ON" : "OFF");
             break;
         case 2:
-            if (active) {
-                uprintf("[%08lu] WIN MODE\n", timer_read32());
-            } else {
-                uprintf("[%08lu] MAC MODE\n", timer_read32());
-            }
+            dprintf("[%08lu] %s MODE\n", timer_read32(), active ? "WIN" : "MAC");
             break;
-    }
-    if (active) {
-        uprintf("ON\n");
-    } else {
-        uprintf("OFF\n");
     }
     if (!dip_switch_update_user(index, active)) {
         return false;
@@ -386,9 +362,27 @@ void bluetooth_task(void)
 
 void keyboard_post_init_kb(void)
 {
+    gpio_set_pin_input(USB_VBUS_PIN);
     k715_bt_init();
+
     keyboard_post_init_user();
 }
+
+void suspend_power_down_kb(void) {
+    // code will run multiple times while keyboard is suspended
+    uprintf("[%08lu] Going to sleep\n", timer_read32());
+
+    suspend_power_down_user();
+}
+
+void suspend_wakeup_init_kb(void) {
+    // code will run on keyboard wakeup
+    uprintf("[%08lu] Waking up\n", timer_read32());
+
+    suspend_wakeup_init_user();
+}
+
+int battery_percentage;
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max){
     if (!rgb_matrix_indicators_advanced_user(led_min, led_max)) {
@@ -401,9 +395,25 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max){
         } else {
             rgb_matrix_set_color(88, 0,0,0);  // "M" indicator
         }
-        rgb_matrix_set_color(89, 0,255,255);    // battery indicator
+        /* for battery indicator:
+            0-50 : R = 0xFF, G = 0x00-0xFF
+            51-100 : R = 0xFF-0x00, G = 0xFF
+        */
+        uint8_t red, green = 0;
+        if (battery_percentage <= 50) {
+            red = 255;
+            green = (uint8_t)((battery_percentage * 255) / 50);
+        } else {
+            red = (uint8_t)(((100 - battery_percentage) * 255) / 50);
+            green = 255;
+        }
+        rgb_matrix_set_color(89, red, green, 0);    // battery indicator
     }
-
 
     return true;
 }
+
+bool usb_vbus_state(void) {
+    return gpio_read_pin(USB_VBUS_PIN);
+}
+

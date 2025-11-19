@@ -46,15 +46,14 @@ uint16_t battery_driver_get_mv(void) {
     adcConvert(&ADCD1, &adcgrpcfg, samples, 2);
     adcStop(&ADCD1);
 
-    dprintf("[%08lu] samples: [     C2,VREFINT]\n", timer_read32());
-    dprintf("[%08lu] samples: [%6d, %6d]\n", timer_read32(), samples[1], samples[0]);
-    dprintf("[%08lu] samples: [0x%04x, 0x%04x]\n", timer_read32(), samples[1], samples[0]);
+    dprintf("[%08lu] ADC_C2=0x%04x, ADC_Vrefint=0x%04x]\n", timer_read32(), samples[1], samples[0]);
 
     value = samples[1] * 1200 * 2 / samples[0];
     dprintf("[%08lu] Get battery mV: ***%d mV***.\n", timer_read32(), (int16_t)value);
     return value;
 }
 
+extern int battery_percentage;
 
 uint8_t battery_driver_sample_percent(void) {
     uint16_t bat_mv = battery_driver_get_mv();
@@ -68,11 +67,12 @@ uint8_t battery_driver_sample_percent(void) {
         percent = bat_mv * 2 / 15 - 459;
     }
     // want to read pin C15
-    uint8_t PC15 = gpio_read_pin(USB_POWER_PIN);
+    uint8_t PC15 = gpio_read_pin(USB_VBUS_PIN);
     // want to read pin C1
     uint8_t PC1 = gpio_read_pin(BATTERY_CHARGING_PIN);
     dprintf("[%08lu] USB power %s, Battery %s.\n", timer_read32(), PC15 ? "DISABLED" : "ENABLED", PC1 ? "CHARGED" : "NOT CHARGED" );
 
     dprintf("[%08lu] Sample battery percent: %d percent.\n", timer_read32(), (int16_t)percent);
+    battery_percentage = percent;
     return percent;
 }
