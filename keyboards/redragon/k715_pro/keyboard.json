@@ -43,7 +43,7 @@
     },
     "battery": {
         "driver": "custom",
-        "sample_interval": 1000000
+        "sample_interval": 60000
     },
     "indicators": {
         "caps_lock": "B8",

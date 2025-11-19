@@ -169,27 +169,27 @@ void get_temp_sensor_value(void) {
         NULL,
         NULL,
         0, ADC_CR2_TSVREFE,           /* CR1, CR2 */
-        ADC_SMPR1_SMP_AN10(ADC_SAMPLE_28P5) | ADC_SMPR1_SMP_VREF(ADC_SAMPLE_239P5),
+        ADC_SMPR1_SMP_SENSOR(ADC_SAMPLE_28P5) | ADC_SMPR1_SMP_VREF(ADC_SAMPLE_239P5),
         0,                            /* SMPR2 */
         ADC_SQR1_NUM_CH(2),
         0,
-        ADC_SQR3_SQ2_N(ADC_CHANNEL_VREFINT)   | ADC_SQR3_SQ1_N(ADC_CHANNEL_SENSOR)
+        ADC_SQR3_SQ1_N(ADC_CHANNEL_VREFINT) | ADC_SQR3_SQ2_N(ADC_CHANNEL_SENSOR)
     };
 
     adcStart(&ADCD1, NULL);
-
     adcConvert(&ADCD1, &adcgrpcfg, samples, 2);
+    adcStop(&ADCD1);
 
     dprintf("[%08lu] samples: [SENSOR,VREFINT]\n", timer_read32());
-    dprintf("[%08lu] samples: [0x%04x, 0x%04x]\n", timer_read32(), samples[0], samples[1]);
+    dprintf("[%08lu] samples: [0x%04x, 0x%04x]\n", timer_read32(), samples[1], samples[0]);
 
     //temp sensor calc:
-    //temp_in_C = (V25-Vsense)/avg_slope +25
-    //temp_c = (1.43 - vsense)/4.3 + 25
-    //temp_c = (1430 - (vsense * 1200)/vrefint)/4300 + 25
-    int temperature = (1430 - (samples[0] * 1200)/samples[1])/4300 + 25;
+    //temp_in_C = (V25-V_sense)/avg_slope +25
+    //temp_c = (1.43 - V_sense)/.0043 + 25
+    //temp_c = (1430 - (A_sense * 1200)/A_refint)/4.3 + 25
+    //temp_c = (14300 - (A_sense * 12000)/A_refint)/43 + 25
+    int temperature = (14300 - (samples[1] * 12000)/samples[0])/43 + 25;
     dprintf("[%08lu] Temperature: %d C\n", timer_read32(), temperature);
-
 }
 
 void adc_debug(int loops)
