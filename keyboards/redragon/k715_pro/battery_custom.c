@@ -59,12 +59,14 @@ uint8_t battery_driver_sample_percent(void) {
     uint16_t bat_mv = battery_driver_get_mv();
     uint8_t percent = 0;
     // https://github.com/zmkfirmware/zmk/blob/3f7c9d7cc4f46617faad288421025ea2a6b0bd28/app/module/drivers/sensor/battery/battery_common.c#L33
+    //if (bat_mv >= 4200) {
     if (bat_mv >= 4130) {
         percent = 100;
     } else if (bat_mv <= 3450) {
         percent = 0;
     } else {
-        percent = bat_mv * 2 / 15 - 459;
+        //percent = bat_mv * 2 / 15 - 459;
+        percent = bat_mv * 2 / 13 - 531;
     }
     // want to read pin C15
     uint8_t PC15 = gpio_read_pin(USB_VBUS_PIN);

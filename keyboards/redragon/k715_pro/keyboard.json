@@ -1,9 +1,9 @@
 {
-    "manufacturer": "redragon",
-    "keyboard_name": "k715 pro",
+    "manufacturer": "Redragon",
+    "keyboard_name": "K715 Pro",
     "bootloader": "stm32duino",
     "bootmagic": {
-        "matrix": [1, 0]
+        "matrix": [0, 0]
     },
     "diode_direction": "COL2ROW",
     "dynamic_keymap": {
