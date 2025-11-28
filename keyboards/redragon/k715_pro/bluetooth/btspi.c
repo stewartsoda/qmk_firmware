@@ -19,7 +19,6 @@
 #include "host_driver.h"
 #include "k715_pro.h"
 #include "btspi.h"
-#include "btfunc.h"
 
 #define SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE (0xAAAABBBB)
 
@@ -28,7 +27,7 @@
 /** @brief Flag indicating if SPI is initialized. */
 static uint8_t spi_inited = 0;
 /** @brief Last detected device mode. */
-static uint8_t last_device_mode = INVALID_DIP_DEVICE_MODE;
+//static uint8_t last_device_mode = INVALID_DIP_DEVICE_MODE;
 /** @brief Current device mode. */
 static uint8_t now_mode = KBD_BT_MODE;
 /** @brief Keyboard device mode from config. */
@@ -67,85 +66,19 @@ static void spi_slave_stop(void)
 }
 
 /**
- * @brief Checks if USB mode is enabled via DIP switch.
+ * @brief Sets the device mode.
  *
- * @return bool True if USB mode is enabled, false otherwise.
+ * @param mode The mode to set.
  */
-static bool check_dip_switch_usb_mode_enabled(void)
+void k715_set_device_mode(uint8_t mode)
 {
     TRACE;
-    palSetLineMode(EXT_READ_DIP_PIN_USB_MODE, PAL_MODE_INPUT_PULLUP);
-    if(palReadLine(EXT_READ_DIP_PIN_USB_MODE) == PAL_LOW)
-    {
-        return true;
+    now_mode = mode;
+    if (mode == KBD_BT_MODE) {
+        mode_bt_state = 1;
+    } else {
+        mode_bt_state = 0;
     }
-
-    return false;
-}
-
-/**
- * @brief Checks if Bluetooth mode is enabled via DIP switch.
- *
- * @return bool True if Bluetooth mode is enabled, false otherwise.
- */
-static bool check_dip_switch_bt_mode_enabled(void)
-{
-    TRACE;
-    palSetLineMode(EXT_READ_DIP_PIN_BT_MODE, PAL_MODE_INPUT_PULLUP);
-    if(palReadLine(EXT_READ_DIP_PIN_BT_MODE) == PAL_LOW)
-    {
-        return true;
-    }
-
-    return false;
-}
-
-/**
- * @brief Checks the device mode based on DIP switches.
- *
- * @param debug_flag Debug flag (unused).
- * @return uint8_t The detected device mode.
- */
-static uint8_t check_dip_device_mode(uint8_t debug_flag)
-{
-    TRACE;
-    uint8_t ret, reboot;
-
-    reboot = 0;
-
-    if(check_dip_switch_bt_mode_enabled())
-    {
-        ret = KBD_BT_MODE;
-    }
-    else if(check_dip_switch_usb_mode_enabled())
-    {
-        ret = KBD_USB_MODE;
-    }
-    else
-    {
-        ret = KBD_POWEROFF_MODE;
-    }
-
-    if(last_device_mode == INVALID_DIP_DEVICE_MODE)
-    {
-        last_device_mode = ret;
-    }
-    else
-    {
-        if(last_device_mode != ret)
-        {
-            last_device_mode = ret;
-            reboot = 1;
-        }
-    }
-
-    if(reboot)
-    {
-        wait_ms(100);
-        mcu_reset();
-    }
-
-    return ret;
 }
 
 /**
@@ -156,7 +89,7 @@ static uint8_t check_dip_device_mode(uint8_t debug_flag)
 static uint8_t get_dev_mode_detected(void)
 {
     TRACE;
-    return(dev_mode_detect);
+    return(now_mode);
 }
 
 /**
@@ -266,6 +199,107 @@ uint8_t buffer_get_sum(uint8_t *buf, int len)
     }
 
     return chksum;
+}
+
+/**
+ * @brief Requests Bluetooth information from the BLE module.
+ */
+void k715bt_send_ble_req_bt_info(void)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_GET_INFO, NULL, 0);
+}
+
+/**
+ * @brief Requests the Bluetooth name from the BLE module.
+ */
+void k715bt_send_ble_req_bt_name(void)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_BT_GETNAME, NULL, 0);
+}
+
+/**
+ * @brief Requests the BLE firmware version from the MCU.
+ */
+void k715bt_send_mcu_req_ble_fwver(void)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_MCU_REQ_BT_FWVER, NULL, 0);
+}
+
+/**
+ * @brief Switches the device mode on the BLE module.
+ *
+ * @param mode The mode to switch to.
+ */
+void k715bt_send_ble_switch_device_mode(uint8_t mode)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_MODE_SET, &mode, 1);
+}
+
+/**
+ * @brief Starts the pairing process on the BLE module.
+ *
+ * @param pair_timeout Timeout for pairing.
+ * @param adv_data Advertising data.
+ * @param adv_data_len Length of advertising data.
+ */
+void k715bt_send_ble_pair(uint8_t pair_timeout, uint8_t *adv_data, uint8_t adv_data_len)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_BT_PAIR, NULL, 0);
+}
+
+/**
+ * @brief Reconnects to the last connected Bluetooth device.
+ *
+ * @param reconn_timeout Timeout for reconnection.
+ */
+void k715bt_send_ble_reconnect_bt(uint8_t reconn_timeout)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_BT_BACK, &reconn_timeout, 1);
+}
+
+/**
+ * @brief Disconnects the current Bluetooth connection.
+ */
+void k715bt_send_ble_disconnect_bt(void)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_BT_DISCONNECT, NULL, 0);
+}
+
+/**
+ * @brief Sets the device name on the BLE module.
+ *
+ * @param dev_name Pointer to the device name string.
+ * @param dev_name_len Length of the device name.
+ */
+void k715bt_send_ble_set_device_name(uint8_t *dev_name, uint8_t dev_name_len)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_BT_SETNAME, dev_name, dev_name_len);
+}
+
+/**
+ * @brief Sets the Bluetooth channel on the BLE module.
+ *
+ * @param bt_channel The channel to set.
+ */
+void k715bt_send_ble_set_bt_channel(uint8_t bt_channel)
+{
+    k715bt_send_spi_extend_single_packet(KBD_CMD_BT_SETCHN, &bt_channel, 1);
+}
+
+/**
+ * @brief Switches the Bluetooth channel.
+ *
+ * Updates the global configuration if the channel changes.
+ *
+ * @param bt_channel The channel to switch to.
+ */
+void k715bt_switch_channel(uint8_t bt_channel)
+{
+    if(g_config.bt_ch != bt_channel)
+    {
+        k715bt_send_ble_set_bt_channel(bt_channel);
+        g_config.bt_ch = bt_channel;
+    }
 }
 
 /**
@@ -433,28 +467,6 @@ __EXIT:
 static volatile uint8_t ble_spi_rx_reading = 0;
 
 /**
- * @brief Checks if BLE SPI RX is reading.
- *
- * @return bool True if reading, false otherwise.
- */
-bool is_ble_spi_rx_reading(void)
-{
-    TRACE;
-    return(ble_spi_rx_reading);
-}
-
-/**
- * @brief Sets the BLE SPI RX reading state.
- *
- * @param val The value to set.
- */
-void set_ble_spi_rx_reading(uint8_t val)
-{
-    TRACE;
-    ble_spi_rx_reading = val;
-}
-
-/**
  * @brief Reads device information from BLE SPI.
  *
  * @param cmd The command to send.
@@ -469,7 +481,7 @@ uint8_t ble_spi_read_dev_info(uint8_t cmd, uint8_t send_req_flag)
     spi_slave_dev_info_t dinf;
     int ret = 0;
 
-    set_ble_spi_rx_reading(1);
+    ble_spi_rx_reading = 1;
 
     memset(&dinf, 0, sizeof(dinf));
     if(cmd == KBD_CMD_GET_INFO)
@@ -581,7 +593,7 @@ __SPI_RX_DEV_INFO:
     cmd = KBD_CMD_GET_INFO;
 
 __BLE_RX_EXIT:
-    set_ble_spi_rx_reading(0);
+    ble_spi_rx_reading = 0;
     return(cmd);
 }
 
@@ -811,13 +823,13 @@ void k715bt_send_spi_extend_single_packet(uint8_t param_type, uint8_t *param_dat
         return;
     }
 
-    if(is_ble_spi_rx_reading())
+    if(ble_spi_rx_reading)
     {
         uint8_t loop_count = 0;
         while(1)
         {
             wait_ms(2);
-            if(!is_ble_spi_rx_reading() || (++loop_count >= 20))
+            if(!ble_spi_rx_reading || (++loop_count >= 20))
             {
                 break;
             }
@@ -1179,181 +1191,169 @@ void ble_spi_slave_cmd_notify(void)
     }
 }
 
-/**
- * @brief Decodes BLE SPI slave data.
- *
- * @param mode_set_timeout Timeout for mode setting.
- * @return uint32_t Return value indicating status or command.
- */
-uint32_t ble_spi_slave_data_decode(uint32_t mode_set_timeout)
-{
-    TRACE;
-    uint8_t state_before_sleep;
-    uint32_t last_key_ms;
+static void handle_bt_disconnect(void) {
+    char b = dev_info.btback;
+    char p = dev_info.btpair;
 
-    if(now_ms > mode_set_timeout)
+    if(g_config.bt_ch == 0)
     {
-        uint8_t cmd;
+        g_config.bt_ch = BT_CHANNEL_1;
+    }
 
-        cmd = ble_spi_read_dev_info(KBD_CMD_UNKNOW, 0);
-
-        if(cmd == KBD_CMD_INVALID)
+    ble_mark_bt_disconnected();
+    if(dev_info.bt_timeout && sys_tk_diff(now_ms, dev_info.bt_timeout, 0) && (p || b))
+    {
+        dev_info.bt_timeout = 0;
+        if(dev_info.btback)
         {
-            return 0xFFFFFFFF;
+            dev_info.btback = 0;
         }
 
-
-        if(cmd != KBD_CMD_GET_INFO)
+        if(dev_info.btpair)
         {
-            return SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE;
-        }
-
-        mode_set_timeout = 0xffffffff;
-        {
-            if(dev_info.devmode == KBD_BT_MODE)
+            dev_info.btpair = 0;
+            if(g_config.bt_last_connected == g_config.bt_ch)
             {
-                char b = dev_info.btback;
-                char p = dev_info.btpair;
-
-                if(g_config.bt_ch == 0)
+                if(g_config.bt_used & (1 << (g_config.bt_ch - 1)))
                 {
-                    g_config.bt_ch = BT_CHANNEL_1;
-                }
-
-                if(dev_info.btstate == BTSTATEDISCONN)
-                {
-                    ble_mark_bt_disconnected();
-                    if(dev_info.bt_timeout && sys_tk_diff(now_ms, dev_info.bt_timeout, 0) && (p || b))
-                    {
-                        dev_info.bt_timeout = 0;
-                        if(dev_info.btback)
-                        {
-                            dev_info.btback = 0;
-                        }
-
-                        if(dev_info.btpair)
-                        {
-                            dev_info.btpair = 0;
-                            if(g_config.bt_last_connected == g_config.bt_ch)
-                            {
-                                if(g_config.bt_used & (1 << (g_config.bt_ch - 1)))
-                                {
-                                    dev_info.btback = 1;
-                                    k715bt_send_ble_reconnect_bt(BT_BACK_TIMEOUT / 1000);
-                                    set_dev_info_bt_reconn_timeout();
-                                }
-                            }
-                        }
-                    }
-                    else if(p && dev_info.bt_timeout)
-                    {
-                        dev_info.btpair = 1;
-                        k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
-                    }
-                    else if(b && dev_info.bt_timeout)
-                    {
-                        dev_info.btback = 1;
-                        k715bt_send_ble_reconnect_bt(BT_BACK_TIMEOUT / 1000);
-                    }
-                    else
-                    {
-                        if(g_config.bt_used & (1 << (g_config.bt_ch - 1)))
-                        {
-                            dev_info.btback = 1;
-                            dev_info.btpair = 0;
-                            k715bt_send_ble_reconnect_bt(BT_BACK_TIMEOUT / 1000);
-                            set_dev_info_bt_reconn_timeout();
-                        }
-                        else
-                        {
-                            dev_info.btpair = 1;
-                            dev_info.btback = 0;
-                            k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
-                            set_dev_info_bt_pair_timeout();
-                        }
-                        last_key_ms = now_ms;
-                    }
-
-                    if((dev_info.btpair || dev_info.btback) != (b || p))
-                    {
-                        mode_set_timeout = now_ms + 2000;
-                    }
-                }
-                else if(dev_info.btstate == BTSTATEDISCOVER)
-                {
-                    state_before_sleep = dev_info.btstate;
-                    ble_mark_bt_disconnected();
-
-                    if(dev_info.btpair == 0)
-                    {
-                        dev_info.btpair = 1;
-                        if(dev_info.bt_timeout == 0)
-                        {
-                            set_dev_info_bt_pair_timeout();
-                            last_key_ms = now_ms;
-                        }
-                    }
-
-                    dev_info.btback = 0;
-                }
-                else if(dev_info.btstate == BTSTATECONNECTED)
-                {
-                    last_key_ms = now_ms;
-                    state_before_sleep = dev_info.btstate;
-                    if((g_config.bt_used & (1 << (g_config.bt_ch - 1))) == 0
-                            && dev_info.btback == 0
-                            && dev_info.btpair == 0)
-                    {
-                        ble_mark_bt_disconnected();
-
-                        dev_info.btpair = 1;
-                        k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
-                        set_dev_info_bt_pair_timeout();
-                    }
-                    else
-                    {
-                        b = g_config.bt_used;
-                        last_key_ms = get_time_ms();
-
-                        dev_info.btback = 0;
-                        dev_info.btpair = 0;
-                        dev_info.bt_timeout = 0;
-                        dev_info.btconnected = 1;
-                        g_config.bt_last_connected = g_config.bt_ch;
-                        g_config.bt_used |= (1 << (g_config.bt_ch - 1));
-                    }
-                }
-                else if(dev_info.btstate == BTSTATERECONN)
-                {
-                    state_before_sleep = dev_info.btstate;
-                    ble_mark_bt_disconnected();
-
-                    if(dev_info.btback == 0)
-                    {
-                        if((g_config.bt_used & (1 << (g_config.bt_ch - 1))) == 0)
-                        {
-                            dev_info.btpair = 1;
-                            k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
-                            set_dev_info_bt_pair_timeout();
-                        }
-                        else
-                        {
-                            dev_info.btback = 1;
-                            if(dev_info.bt_timeout == 0)
-                            {
-                                set_dev_info_bt_reconn_timeout();
-                            }
-
-                            dev_info.btpair = 0;
-                        }
-                    }
+                    dev_info.btback = 1;
+                    k715bt_send_ble_reconnect_bt(BT_BACK_TIMEOUT / 1000);
+                    set_dev_info_bt_reconn_timeout();
                 }
             }
         }
     }
+    else if(p && dev_info.bt_timeout)
+    {
+        dev_info.btpair = 1;
+        k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
+    }
+    else if(b && dev_info.bt_timeout)
+    {
+        dev_info.btback = 1;
+        k715bt_send_ble_reconnect_bt(BT_BACK_TIMEOUT / 1000);
+    }
+    else
+    {
+        if(g_config.bt_used & (1 << (g_config.bt_ch - 1)))
+        {
+            dev_info.btback = 1;
+            dev_info.btpair = 0;
+            k715bt_send_ble_reconnect_bt(BT_BACK_TIMEOUT / 1000);
+            set_dev_info_bt_reconn_timeout();
+        }
+        else
+        {
+            dev_info.btpair = 1;
+            dev_info.btback = 0;
+            k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
+            set_dev_info_bt_pair_timeout();
+        }
+    }
+}
 
-    (void)state_before_sleep;
-    (void)last_key_ms;
+static void handle_bt_discover(void) {
+    ble_mark_bt_disconnected();
+
+    if(dev_info.btpair == 0)
+    {
+        dev_info.btpair = 1;
+        if(dev_info.bt_timeout == 0)
+        {
+            set_dev_info_bt_pair_timeout();
+        }
+    }
+
+    dev_info.btback = 0;
+}
+
+static void handle_bt_connected(void) {
+    if((g_config.bt_used & (1 << (g_config.bt_ch - 1))) == 0
+            && dev_info.btback == 0
+            && dev_info.btpair == 0)
+    {
+        ble_mark_bt_disconnected();
+
+        dev_info.btpair = 1;
+        k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
+        set_dev_info_bt_pair_timeout();
+    }
+    else
+    {
+        dev_info.btback = 0;
+        dev_info.btpair = 0;
+        dev_info.bt_timeout = 0;
+        dev_info.btconnected = 1;
+        g_config.bt_last_connected = g_config.bt_ch;
+        g_config.bt_used |= (1 << (g_config.bt_ch - 1));
+    }
+}
+
+static void handle_bt_reconnect(void) {
+    ble_mark_bt_disconnected();
+
+    if(dev_info.btback == 0)
+    {
+        if((g_config.bt_used & (1 << (g_config.bt_ch - 1))) == 0)
+        {
+            dev_info.btpair = 1;
+            k715bt_send_ble_pair(BT_BP_TIMEOUT / 1000, NULL, 0);
+            set_dev_info_bt_pair_timeout();
+        }
+        else
+        {
+            dev_info.btback = 1;
+            if(dev_info.bt_timeout == 0)
+            {
+                set_dev_info_bt_reconn_timeout();
+            }
+
+            dev_info.btpair = 0;
+        }
+    }
+}
+
+/**
+ * @brief Decodes BLE SPI slave data.
+ *
+ * @return uint32_t Return value indicating status or command.
+ */
+uint32_t ble_spi_slave_data_decode(void)
+{
+    TRACE;
+    uint8_t cmd;
+
+    cmd = ble_spi_read_dev_info(KBD_CMD_UNKNOW, 0);
+
+    if(cmd == KBD_CMD_INVALID)
+    {
+        return 0xFFFFFFFF;
+    }
+
+    if(cmd != KBD_CMD_GET_INFO)
+    {
+        return SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE;
+    }
+
+    if(dev_info.devmode == KBD_BT_MODE)
+    {
+        if(dev_info.btstate == BTSTATEDISCONN)
+        {
+            handle_bt_disconnect();
+        }
+        else if(dev_info.btstate == BTSTATEDISCOVER)
+        {
+            handle_bt_discover();
+        }
+        else if(dev_info.btstate == BTSTATECONNECTED)
+        {
+            handle_bt_connected();
+        }
+        else if(dev_info.btstate == BTSTATERECONN)
+        {
+            handle_bt_reconnect();
+        }
+    }
 
     return 0;
 }
@@ -1375,7 +1375,7 @@ void check_read_spi_data(void)
     {
         uint32_t ret = 0;
 
-        ret = ble_spi_slave_data_decode(0);
+        ret = ble_spi_slave_data_decode();
         if(ret == SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE)
         {
             ble_spi_slave_cmd_notify();
@@ -1419,8 +1419,7 @@ void k715_ble_spi_init(void)
 
     wait_ms(500);
 
-    dev_mode_detect = check_dip_device_mode(1);
-    now_mode = dev_mode_detect;
+    dev_mode_detect = now_mode;
 
     init_ext_read_spi_slave_gpio();
 

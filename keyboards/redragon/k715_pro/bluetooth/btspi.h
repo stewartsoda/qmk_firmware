@@ -202,3 +202,4 @@ bool is_usb_mode_enabled(void);
 bool is_bt_mode_enabled(void);
 void k715_ble_spi_init(void);
 void k715bt_send_spi_extend_single_packet(uint8_t param_type, uint8_t *param_data, uint8_t param_len);
+void k715_set_device_mode(uint8_t mode);

@@ -124,6 +124,54 @@ const is31fl3733_led_t PROGMEM g_is31fl3733_leds[IS31FL3733_LED_COUNT] =
 };
 
 /**
+ * @brief Powers on the IS31FL3733 LED controller.
+ */
+void init_set_IS31FL3733_poweron(void)
+{
+    palSetLineMode(IS31FL3733_POWERON_PIN, PAL_MODE_OUTPUT_PUSHPULL);   // BOOT1
+    palSetLine(IS31FL3733_POWERON_PIN);
+}
+
+/**
+ * @brief Jumps to the bootloader.
+ *
+ * Resets the system.
+ */
+void bootloader_jump(void)
+{
+    NVIC_SystemReset();
+}
+
+/**
+ * @brief Resets the MCU.
+ */
+void mcu_reset(void)
+{
+    NVIC_SystemReset();
+}
+
+/**
+ * @brief Initializes the board hardware.
+ *
+ * Disables JTAG/SWD, sets up pins for Caps Lock, UART, and SWD.
+ * Powers on the LED controller.
+ */
+void board_init(void)
+{
+    AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_DISABLE;        // disable JTAG/SWD
+
+    palSetLineMode(CAPS_LOCK_DRV_PIN, PAL_MODE_OUTPUT_PUSHPULL);
+    set_caps_lock_off();
+
+    palSetPadMode(GPIOC, 11, PAL_MODE_INPUT);           // UART4_RX
+    palSetPadMode(GPIOA, 13, PAL_MODE_OUTPUT_PUSHPULL); // JTMS-SWDIO
+    palSetPadMode(GPIOA, 14, PAL_MODE_OUTPUT_PUSHPULL); // JTCK-SWCLK
+    palSetPadMode(GPIOA, 15, PAL_MODE_OUTPUT_PUSHPULL); // JTDI
+
+    init_set_IS31FL3733_poweron();
+}
+
+/**
  * @brief Sends a HID report over BLE.
  *
  * @param report_type The type of report to send (e.g., normal key, extra key).
@@ -247,9 +295,11 @@ bool dip_switch_update_kb(uint8_t index, bool active) {
     switch (index) {
         case 0:
             dprintf("[%08lu] BT MODE %s\n", timer_read32(), active ? "ON" : "OFF");
+            k715_set_device_mode(active ? KBD_BT_MODE : KBD_POWEROFF_MODE);
             break;
         case 1:
             dprintf("[%08lu] USB MODE %s\n", timer_read32(), active ? "ON" : "OFF");
+            if (active) k715_set_device_mode(KBD_USB_MODE);
             break;
         case 2:
             dprintf("[%08lu] %s MODE\n", timer_read32(), active ? "WIN" : "MAC");
@@ -347,30 +397,6 @@ static bool _swtich_bt_driver(void)
 }
 
 /**
- * @brief Public function to switch to BLE driver if in BT mode.
- *
- * Used in bluetooth_task.
- */
-void k715bt_bt_swtich_ble_driver(void)
-{
-    if(is_bt_mode_enabled())
-    {
-        _swtich_bt_driver();
-    }
-}
-
-/**
- * @brief Initializes RGB matrix flags.
- *
- * Used in k715_bt_init.
- */
-void k715_rgb_matrix_flags_init(void)
-{
-    rgb_matrix_enable();
-    rgb_matrix_set_flags(NORMAL_LED_FLAG_BIT);
-}
-
-/**
  * @brief Initializes the Bluetooth subsystem.
  *
  * Used in keyboard_post_init_kb.
@@ -378,7 +404,8 @@ void k715_rgb_matrix_flags_init(void)
 void k715_bt_init(void)
 {
     k715_ble_spi_init();
-    k715_rgb_matrix_flags_init();
+    rgb_matrix_enable();
+    rgb_matrix_set_flags(NORMAL_LED_FLAG_BIT);
 }
 
 /**
@@ -463,8 +490,20 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record)
  */
 void bluetooth_task(void)
 {
-    k715bt_bt_swtich_ble_driver();
+    if(is_bt_mode_enabled())
+    {
+        _swtich_bt_driver();
+    }
     check_read_spi_data();
+}
+
+/**
+ * @brief QMK callback for housekeeping tasks.
+ *
+ * Calls bluetooth_task.
+ */
+void housekeeping_task_kb(void) {
+    bluetooth_task();
 }
 
 /**
