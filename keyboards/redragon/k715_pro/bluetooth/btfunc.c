@@ -23,51 +23,98 @@
 extern user_settings_config g_config;
 extern tDevInfo dev_info;
 
+/**
+ * @brief Requests Bluetooth information from the BLE module.
+ */
 void k715bt_send_ble_req_bt_info(void)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_GET_INFO, NULL, 0);
 }
 
+/**
+ * @brief Requests the Bluetooth name from the BLE module.
+ */
 void k715bt_send_ble_req_bt_name(void)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_BT_GETNAME, NULL, 0);
 }
 
+/**
+ * @brief Requests the BLE firmware version from the MCU.
+ */
 void k715bt_send_mcu_req_ble_fwver(void)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_MCU_REQ_BT_FWVER, NULL, 0);
 }
 
+/**
+ * @brief Switches the device mode on the BLE module.
+ *
+ * @param mode The mode to switch to.
+ */
 void k715bt_send_ble_switch_device_mode(uint8_t mode)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_MODE_SET, &mode, 1);
 }
 
+/**
+ * @brief Starts the pairing process on the BLE module.
+ *
+ * @param pair_timeout Timeout for pairing.
+ * @param adv_data Advertising data.
+ * @param adv_data_len Length of advertising data.
+ */
 void k715bt_send_ble_pair(uint8_t pair_timeout, uint8_t *adv_data, uint8_t adv_data_len)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_BT_PAIR, NULL, 0);
 }
 
+/**
+ * @brief Reconnects to the last connected Bluetooth device.
+ *
+ * @param reconn_timeout Timeout for reconnection.
+ */
 void k715bt_send_ble_reconnect_bt(uint8_t reconn_timeout)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_BT_BACK, &reconn_timeout, 1);
 }
 
+/**
+ * @brief Disconnects the current Bluetooth connection.
+ */
 void k715bt_send_ble_disconnect_bt(void)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_BT_DISCONNECT, NULL, 0);
 }
 
+/**
+ * @brief Sets the device name on the BLE module.
+ *
+ * @param dev_name Pointer to the device name string.
+ * @param dev_name_len Length of the device name.
+ */
 void k715bt_send_ble_set_device_name(uint8_t *dev_name, uint8_t dev_name_len)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_BT_SETNAME, dev_name, dev_name_len);
 }
 
+/**
+ * @brief Sets the Bluetooth channel on the BLE module.
+ *
+ * @param bt_channel The channel to set.
+ */
 void k715bt_send_ble_set_bt_channel(uint8_t bt_channel)
 {
     k715bt_send_spi_extend_single_packet(KBD_CMD_BT_SETCHN, &bt_channel, 1);
 }
 
+/**
+ * @brief Switches the Bluetooth channel.
+ *
+ * Updates the global configuration if the channel changes.
+ *
+ * @param bt_channel The channel to switch to.
+ */
 void k715bt_switch_channel(uint8_t bt_channel)
 {
     if(g_config.bt_ch != bt_channel)

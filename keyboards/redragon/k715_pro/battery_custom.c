@@ -6,12 +6,20 @@
 #include "config.h"
 
 
+/**
+ * @brief Initializes the battery driver.
+ */
 void battery_driver_init(void) {
     // Perform any initialisation here
     //gpio_set_pin_input(BATTERY_ADC_PIN);
     palSetLineMode((BATTERY_ADC_PIN), PAL_MODE_INPUT_ANALOG);
 }
 
+/**
+ * @brief Gets the battery voltage in millivolts.
+ *
+ * @return uint16_t Battery voltage in mV.
+ */
 uint16_t battery_driver_get_mv(void) {
     /*
         Do the following:
@@ -55,6 +63,13 @@ uint16_t battery_driver_get_mv(void) {
 
 extern int battery_percentage;
 
+/**
+ * @brief Samples the battery voltage and calculates the percentage.
+ *
+ * Updates the global battery_percentage variable.
+ *
+ * @return uint8_t Battery percentage (0-100).
+ */
 uint8_t battery_driver_sample_percent(void) {
     uint16_t bat_mv = battery_driver_get_mv();
     uint8_t percent = 0;

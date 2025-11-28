@@ -16,16 +16,41 @@
 
 #include "quantum.h"
 
+/**
+ * @brief Weak function for pre-task operations.
+ *
+ * Can be overridden by the user.
+ */
 __attribute__((weak)) void bluetooth_pre_task(void) {}
+
+/**
+ * @brief Weak function for task operations.
+ *
+ * Can be overridden by the user.
+ */
 __attribute__((weak)) void bluetooth_task(void) {}
+
+/**
+ * @brief Weak function for post-task operations.
+ *
+ * Can be overridden by the user.
+ */
 __attribute__((weak)) void bluetooth_post_task(void) {}
 
+/**
+ * @brief Runs all Bluetooth tasks (pre, main, post).
+ */
 void bluetooth_tasks(void) {
     bluetooth_pre_task();
     bluetooth_task();
     bluetooth_post_task();
 }
 
+/**
+ * @brief QMK callback for housekeeping tasks.
+ *
+ * Calls bluetooth_tasks.
+ */
 void housekeeping_task_kb(void) {
     bluetooth_tasks();
 }

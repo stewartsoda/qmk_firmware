@@ -18,24 +18,48 @@
 #include "config.h"
 #include "btspi.h"
 
+#define TRACE dprintf("[%08lu] %s: %d\n", timer_read32(), __FUNCTION__, __LINE__)
+
+
+/**
+ * @brief Powers on the IS31FL3733 LED controller.
+ */
 void init_set_IS31FL3733_poweron(void)
 {
+    TRACE;
     palSetLineMode(IS31FL3733_POWERON_PIN, PAL_MODE_OUTPUT_PUSHPULL);   // BOOT1
     palSetLine(IS31FL3733_POWERON_PIN);
 }
 
+/**
+ * @brief Jumps to the bootloader.
+ *
+ * Resets the system.
+ */
 void bootloader_jump(void)
 {
+    TRACE;
     NVIC_SystemReset();
 }
 
+/**
+ * @brief Resets the MCU.
+ */
 void mcu_reset(void)
 {
+    TRACE;
     NVIC_SystemReset();
 }
 
+/**
+ * @brief Initializes the board hardware.
+ *
+ * Disables JTAG/SWD, sets up pins for Caps Lock, UART, and SWD.
+ * Powers on the LED controller.
+ */
 void board_init(void)
 {
+    TRACE;
     AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_DISABLE;        // disable JTAG/SWD
 
     palSetLineMode(CAPS_LOCK_DRV_PIN, PAL_MODE_OUTPUT_PUSHPULL);

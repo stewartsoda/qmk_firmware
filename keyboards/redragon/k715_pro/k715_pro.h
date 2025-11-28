@@ -35,4 +35,4 @@ enum {
 
 #define NORMAL_LED_FLAG_BIT    (LED_FLAG_KEYLIGHT | LED_FLAG_MODIFIER)
 
-void debug_method(int loops);
+void debug_method(void);

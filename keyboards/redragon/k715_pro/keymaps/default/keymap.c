@@ -119,6 +119,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     )
 };
 
+/**
+ * @brief QMK callback after keyboard initialization.
+ *
+ * Enables debug mode.
+ */
 void keyboard_post_init_user(void) {
     // Customise these values to desired behaviour
     debug_enable=true;
@@ -127,11 +132,20 @@ void keyboard_post_init_user(void) {
     //debug_mouse=true;
   }
 
+/**
+ * @brief QMK callback for user key processing.
+ *
+ * Handles the debug key.
+ *
+ * @param keycode The keycode to process.
+ * @param record The key record.
+ * @return bool True if processing should continue, false otherwise.
+ */
   bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
       case DB_KEY:  //debug key
         if (record->event.pressed) {
-            debug_method(1);
+            debug_method();
         } else {
           // Do something else when release
         }
@@ -141,6 +155,14 @@ void keyboard_post_init_user(void) {
     }
   }
 
+/**
+ * @brief QMK callback for shutdown.
+ *
+ * Sets RGB matrix color based on shutdown type.
+ *
+ * @param jump_to_bootloader True if jumping to bootloader, false for soft reset.
+ * @return bool False to skip keyboard-level processing.
+ */
 bool shutdown_user(bool jump_to_bootloader) {
     if (jump_to_bootloader) {
         // red for bootloader
@@ -157,6 +179,15 @@ bool shutdown_user(bool jump_to_bootloader) {
     return false;
 }
 
+/**
+ * @brief QMK callback for advanced RGB indicators.
+ *
+ * Sets Caps Lock LED color.
+ *
+ * @param led_min Minimum LED index.
+ * @param led_max Maximum LED index.
+ * @return bool True to continue keyboard-level callback.
+ */
   bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 //  Set caps lock LED to RED
     if (host_keyboard_led_state().caps_lock) {

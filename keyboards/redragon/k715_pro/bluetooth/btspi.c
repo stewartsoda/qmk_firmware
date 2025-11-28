@@ -23,33 +23,57 @@
 
 #define SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE (0xAAAABBBB)
 
+#define TRACE dprintf("[%08lu] %s: %d\n", timer_read32(), __FUNCTION__, __LINE__)
+
+/** @brief Flag indicating if SPI is initialized. */
 static uint8_t spi_inited = 0;
+/** @brief Last detected device mode. */
 static uint8_t last_device_mode = INVALID_DIP_DEVICE_MODE;
+/** @brief Current device mode. */
 static uint8_t now_mode = KBD_BT_MODE;
+/** @brief Keyboard device mode from config. */
 static uint8_t kbd_dev_mode;
+/** @brief Detected device mode. */
 static uint8_t dev_mode_detect;
+/** @brief Bluetooth state mode. */
 static uint8_t mode_bt_state = 0;
+/** @brief Device information structure. */
 tDevInfo dev_info;
 
 static spi_read_data_t spi_salve_data;
+/** @brief User settings configuration. */
 user_settings_config g_config;
 
 #define now_ms timer_read32()
 #define get_time_ms() timer_read32()
 
+/**
+ * @brief Starts SPI slave communication.
+ */
 static void spi_slave_start(void)
 {
+    TRACE;
     spi_start(SPI_SLAVE_CS, false, SPI_MODE, SPI_DIVISOR);
     wait_us(200);
 }
 
+/**
+ * @brief Stops SPI slave communication.
+ */
 static void spi_slave_stop(void)
 {
+    TRACE;
     spi_stop();
 }
 
+/**
+ * @brief Checks if USB mode is enabled via DIP switch.
+ *
+ * @return bool True if USB mode is enabled, false otherwise.
+ */
 static bool check_dip_switch_usb_mode_enabled(void)
 {
+    TRACE;
     palSetLineMode(EXT_READ_DIP_PIN_USB_MODE, PAL_MODE_INPUT_PULLUP);
     if(palReadLine(EXT_READ_DIP_PIN_USB_MODE) == PAL_LOW)
     {
@@ -59,8 +83,14 @@ static bool check_dip_switch_usb_mode_enabled(void)
     return false;
 }
 
+/**
+ * @brief Checks if Bluetooth mode is enabled via DIP switch.
+ *
+ * @return bool True if Bluetooth mode is enabled, false otherwise.
+ */
 static bool check_dip_switch_bt_mode_enabled(void)
 {
+    TRACE;
     palSetLineMode(EXT_READ_DIP_PIN_BT_MODE, PAL_MODE_INPUT_PULLUP);
     if(palReadLine(EXT_READ_DIP_PIN_BT_MODE) == PAL_LOW)
     {
@@ -70,8 +100,15 @@ static bool check_dip_switch_bt_mode_enabled(void)
     return false;
 }
 
+/**
+ * @brief Checks the device mode based on DIP switches.
+ *
+ * @param debug_flag Debug flag (unused).
+ * @return uint8_t The detected device mode.
+ */
 static uint8_t check_dip_device_mode(uint8_t debug_flag)
 {
+    TRACE;
     uint8_t ret, reboot;
 
     reboot = 0;
@@ -111,57 +148,115 @@ static uint8_t check_dip_device_mode(uint8_t debug_flag)
     return ret;
 }
 
+/**
+ * @brief Gets the detected device mode.
+ *
+ * @return uint8_t The detected device mode.
+ */
 static uint8_t get_dev_mode_detected(void)
 {
+    TRACE;
     return(dev_mode_detect);
 }
 
+/**
+ * @brief Initializes the external read SPI slave GPIO.
+ */
 static void init_ext_read_spi_slave_gpio(void)
 {
+    TRACE;
     palSetLineMode(EXT_READ_SPI_SLAVE_INT_PIN, EXT_READ_SPI_SLAVE_GPIO_INIT);
 }
 
+/**
+ * @brief Sets the IS31FL3733 to normal mode.
+ */
 static void set_IS31FL3733_normal_mode(void)
 {
+    TRACE;
     palSetLineMode(EXT_IS31FL3733_SUSPEND_PIN, PAL_MODE_OUTPUT_PUSHPULL);
     palSetLine(EXT_IS31FL3733_SUSPEND_PIN);
 }
 
+/**
+ * @brief Initializes the device information structure.
+ */
 static void init_dev_info(void)
 {
+    TRACE;
     memset(&dev_info, 0, sizeof(dev_info));
 }
 
 static uint8_t ble_spi_notify_cmd_buf[MAX_BLE_SPI_NOTIFY_CMD_BUF_SIZE + 4];
+
+/**
+ * @brief Gets the BLE SPI notify command.
+ *
+ * @return uint8_t The notify command.
+ */
 static uint8_t get_ble_spi_notify_cmd(void)
 {
+    TRACE;
     return(ble_spi_notify_cmd_buf[2]);
 }
 
+/**
+ * @brief Gets the BLE SPI notify command data.
+ *
+ * @return uint8_t* Pointer to the command data.
+ */
 static uint8_t *get_ble_spi_notify_cmd_data(void)
 {
+    TRACE;
     return(&(ble_spi_notify_cmd_buf[3]));
 }
 
+/**
+ * @brief Sets the BLE SPI notify command data header.
+ *
+ * @param cmd The command.
+ * @param len The length of the data.
+ */
 static void set_ble_spi_notify_cmd_data_header(uint8_t cmd, uint8_t len)
 {
+    TRACE;
     ble_spi_notify_cmd_buf[0] = SPI_BLE_PACKET_HEADER;
     ble_spi_notify_cmd_buf[1] = len + 1;
     ble_spi_notify_cmd_buf[2] = cmd;
 }
 
+/**
+ * @brief Gets the BLE SPI notify command data length.
+ *
+ * @return uint8_t The length of the data.
+ */
 uint8_t get_ble_spi_notify_cmd_data_length(void)
 {
+    TRACE;
     return(ble_spi_notify_cmd_buf[1]);
 }
 
+/**
+ * @brief Gets the BLE SPI notify data buffer.
+ *
+ * @return uint8_t* Pointer to the buffer.
+ */
 uint8_t *get_ble_spi_notify_data(void)
 {
+    TRACE;
     return(ble_spi_notify_cmd_buf);
 }
 
+/**
+ * @brief Calculates the checksum of a buffer.
+ *
+ * @param buf Pointer to the buffer.
+ * @param len Length of the buffer.
+ * @return uint8_t The checksum.
+ */
 uint8_t buffer_get_sum(uint8_t *buf, int len)
 {
+    TRACE;
     int i;
     uint8_t chksum = 0;
 
@@ -173,8 +268,18 @@ uint8_t buffer_get_sum(uint8_t *buf, int len)
     return chksum;
 }
 
+/**
+ * @brief Sends a request and receives a response via SPI.
+ *
+ * @param cmd The command to send.
+ * @param buf Buffer to store the response.
+ * @param len Length of the buffer.
+ * @param send_req_flag Flag to indicate if a request should be sent.
+ * @return int The command received in response, or 0 on error.
+ */
 int ble_spi_req_recv(uint8_t cmd, uint8_t *buf, uint8_t len, uint8_t send_req_flag)
 {
+    TRACE;
     uint8_t data[MAX_BLE_SPI_RX_FRAME_MAX_SIZE];
     int ret;
     int i = 0;
@@ -326,18 +431,39 @@ __EXIT:
 }
 
 static volatile uint8_t ble_spi_rx_reading = 0;
+
+/**
+ * @brief Checks if BLE SPI RX is reading.
+ *
+ * @return bool True if reading, false otherwise.
+ */
 bool is_ble_spi_rx_reading(void)
 {
+    TRACE;
     return(ble_spi_rx_reading);
 }
 
+/**
+ * @brief Sets the BLE SPI RX reading state.
+ *
+ * @param val The value to set.
+ */
 void set_ble_spi_rx_reading(uint8_t val)
 {
+    TRACE;
     ble_spi_rx_reading = val;
 }
 
+/**
+ * @brief Reads device information from BLE SPI.
+ *
+ * @param cmd The command to send.
+ * @param send_req_flag Flag to indicate if a request should be sent.
+ * @return uint8_t The command received.
+ */
 uint8_t ble_spi_read_dev_info(uint8_t cmd, uint8_t send_req_flag)
 {
+    TRACE;
     uint8_t len = MAX_SPI_BLE_SINGLE_PACKET_LENGTH;
     uint8_t cnt = 0;
     spi_slave_dev_info_t dinf;
@@ -459,8 +585,14 @@ __BLE_RX_EXIT:
     return(cmd);
 }
 
+/**
+ * @brief Gets the Caps Lock state.
+ *
+ * @return int 1 if on, 0 if off, -1 if unknown/poweroff.
+ */
 static int get_caps_state(void)
 {
+    TRACE;
     int onoff;
 
     onoff = -1;
@@ -491,8 +623,12 @@ static int get_caps_state(void)
     return(onoff);
 }
 
+/**
+ * @brief Updates the Caps Lock LED.
+ */
 void update_caps_led(void)
 {
+    TRACE;
     int onoff;
 
     if(now_mode == KBD_POWEROFF_MODE)
@@ -511,8 +647,14 @@ void update_caps_led(void)
     }
 }
 
+/**
+ * @brief Reads and updates the device mode from BLE SPI.
+ *
+ * @return int 0 on success, negative on error.
+ */
 int ble_spi_read_and_update_dev_mode(void)
 {
+    TRACE;
     int ret;
     unsigned short cnt;
 
@@ -559,8 +701,14 @@ int ble_spi_read_and_update_dev_mode(void)
     return ret;
 }
 
+/**
+ * @brief Checks if poweroff mode is enabled.
+ *
+ * @return bool True if poweroff mode is enabled, false otherwise.
+ */
 bool is_poweroff_mode_enabled(void)
 {
+    TRACE;
     if(now_mode == KBD_POWEROFF_MODE)
     {
         return(true);
@@ -569,8 +717,17 @@ bool is_poweroff_mode_enabled(void)
     return false;
 }
 
+/**
+ * @brief Sends data via BLE SPI.
+ *
+ * @param cmd The command to send.
+ * @param buf Pointer to the data buffer.
+ * @param len Length of the data.
+ * @return int 0 on success.
+ */
 static int ble_spi_send(uint8_t cmd, uint8_t *buf, uint8_t len)
 {
+    TRACE;
     int mul = 0;
     uint8_t data[MAX_BLE_SPI_TX_FRAME_MAX_SIZE], s = len;
 
@@ -639,8 +796,16 @@ static int ble_spi_send(uint8_t cmd, uint8_t *buf, uint8_t len)
     return 0;
 }
 
+/**
+ * @brief Sends an extended single packet via BLE SPI.
+ *
+ * @param param_type The parameter type (command).
+ * @param param_data Pointer to the parameter data.
+ * @param param_len Length of the parameter data.
+ */
 void k715bt_send_spi_extend_single_packet(uint8_t param_type, uint8_t *param_data, uint8_t param_len)
 {
+    TRACE;
     if(is_poweroff_mode_enabled())
     {
         return;
@@ -665,8 +830,12 @@ void k715bt_send_spi_extend_single_packet(uint8_t param_type, uint8_t *param_dat
     }
 }
 
+/**
+ * @brief Initializes user settings.
+ */
 static void init_user_settings(void)
 {
+    TRACE;
     memset(&g_config, 0, sizeof(g_config));
 
     g_config.magic_num = KB_MAGIC_NUMBER;
@@ -675,8 +844,18 @@ static void init_user_settings(void)
     g_config.bt_last_connected = BT_CHANNEL_INVALID;
 }
 
+/**
+ * @brief Requests a BLE exchange.
+ *
+ * @param req_cmd The request command.
+ * @param ack_cmd The expected acknowledge command.
+ * @param data Buffer to store the response.
+ * @param len Length of the buffer.
+ * @return int 1 on success, 0 on failure.
+ */
 static int req_ble_exchange(uint8_t req_cmd, uint8_t ack_cmd, uint8_t *data, uint8_t len)
 {
+    TRACE;
     int ret = 0;
     uint8_t read_count = 0;
 
@@ -708,19 +887,38 @@ __LOOP_READ_CMD:
 static uint8_t bt_mac_addr[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 static uint8_t bt_fw_verinfo[BT_FW_VERINFO_LEN + 1] = {0};
 
+/**
+ * @brief Gets the Bluetooth MAC address.
+ *
+ * @return uint8_t* Pointer to the MAC address.
+ */
 uint8_t *get_bt_mac_addr(void)
 {
+    TRACE;
     return(bt_mac_addr);
 }
 
+/**
+ * @brief Gets the Bluetooth firmware version info.
+ *
+ * @param len Pointer to store the length of the version info.
+ * @return uint8_t* Pointer to the version info.
+ */
 uint8_t *get_bt_fw_verinfo(uint8_t *len)
 {
+    TRACE;
     *len = BT_FW_VERINFO_LEN;
     return(bt_fw_verinfo);
 }
 
+/**
+ * @brief Initializes and requests the Bluetooth version.
+ *
+ * @return int 0 on success.
+ */
 int init_req_bt_ver(void)
 {
+    TRACE;
     int ret;
     uint8_t data[48];
 
@@ -740,24 +938,47 @@ int init_req_bt_ver(void)
     return 0;
 }
 
+/**
+ * @brief Gets the active Bluetooth channel.
+ *
+ * @return uint8_t The active channel.
+ */
 uint8_t get_active_bt_chn(void)
 {
+    TRACE;
     return(g_config.bt_ch);
 }
 
 #define DEFAULT_BT_NAME "BLE Keyboard"
+/**
+ * @brief Sends the Bluetooth name with channel.
+ *
+ * @param chn The channel (unused).
+ */
 void send_bt_name_with_chn(uint8_t chn)
 {
+    TRACE;
     k715bt_send_ble_set_device_name((uint8_t *)DEFAULT_BT_NAME, strlen(DEFAULT_BT_NAME));
 }
 
+/**
+ * @brief Marks Bluetooth as disconnected.
+ */
 void ble_mark_bt_disconnected(void)
 {
+    TRACE;
     dev_info.btconnected = 0;
 }
 
+/**
+ * @brief Sets the device info Bluetooth timeout.
+ *
+ * @param timeout The timeout value.
+ * @param flag Flag to indicate if timeout is absolute or relative.
+ */
 void set_dev_info_bt_timeout(uint32_t timeout, int flag)
 {
+    TRACE;
     if(timeout == 0)
     {
         if(flag)
@@ -775,18 +996,35 @@ void set_dev_info_bt_timeout(uint32_t timeout, int flag)
     }
 }
 
+/**
+ * @brief Sets the Bluetooth pair timeout.
+ */
 void set_dev_info_bt_pair_timeout(void)
 {
+    TRACE;
     set_dev_info_bt_timeout(0, 0);
 }
 
+/**
+ * @brief Sets the Bluetooth reconnect timeout.
+ */
 void set_dev_info_bt_reconn_timeout(void)
 {
+    TRACE;
     set_dev_info_bt_timeout(BT_BACK_TIMEOUT - RF_TIMEOUT_OFFSET + get_time_ms(), 1);
 }
 
+/**
+ * @brief Calculates the system tick difference.
+ *
+ * @param now Current time.
+ * @param start_time Start time.
+ * @param flag Flag (unused).
+ * @return int 1 if difference >= 10, 0 otherwise.
+ */
 int sys_tk_diff(uint32_t now, uint32_t start_time, int flag)
 {
+    TRACE;
     int ret;
 
     if(now > start_time)
@@ -806,8 +1044,14 @@ int sys_tk_diff(uint32_t now, uint32_t start_time, int flag)
     return 0;
 }
 
+/**
+ * @brief Checks if Bluetooth mode is enabled.
+ *
+ * @return bool True if enabled, false otherwise.
+ */
 bool is_bt_mode_enabled(void)
 {
+    TRACE;
     if(mode_bt_state)
     {
         return true;
@@ -816,8 +1060,14 @@ bool is_bt_mode_enabled(void)
     return false;
 }
 
+/**
+ * @brief Checks if USB mode is enabled.
+ *
+ * @return bool True if enabled, false otherwise.
+ */
 bool is_usb_mode_enabled(void)
 {
+    TRACE;
     if(now_mode == KBD_USB_MODE)
     {
         return true;
@@ -827,13 +1077,24 @@ bool is_usb_mode_enabled(void)
 }
 
 static uint8_t last_spi_notify_line_level = 0xFF;
+
+/**
+ * @brief Invalidates the SPI slave read line.
+ */
 void invlaid_read_spi_slave_line(void)
 {
+    TRACE;
     last_spi_notify_line_level = EXT_READ_SPI_SLAVE_READY;
 }
 
+/**
+ * @brief Checks the SPI slave read line.
+ *
+ * @return int 1 if ready, 0 otherwise.
+ */
 int check_read_spi_slave_line(void)
 {
+    TRACE;
     uint8_t line_level;
     int ret = 0;
 
@@ -861,8 +1122,12 @@ int check_read_spi_slave_line(void)
     return ret;
 }
 
+/**
+ * @brief Sends the MCU firmware version to BLE.
+ */
 static void send_mcu_fwver_to_ble(void)
 {
+    TRACE;
     uint8_t buf[14];
 
     memset(buf, 0, sizeof(buf));
@@ -871,8 +1136,12 @@ static void send_mcu_fwver_to_ble(void)
     k715bt_send_spi_extend_single_packet(KBD_CMD_SEND_BT_MCU_FWVER, buf, strlen((char *)buf));
 }
 
+/**
+ * @brief Handles BLE SPI slave command notifications.
+ */
 void ble_spi_slave_cmd_notify(void)
 {
+    TRACE;
     uint8_t rx_cmd;
     uint8_t *rx_data;
 
@@ -910,8 +1179,15 @@ void ble_spi_slave_cmd_notify(void)
     }
 }
 
+/**
+ * @brief Decodes BLE SPI slave data.
+ *
+ * @param mode_set_timeout Timeout for mode setting.
+ * @return uint32_t Return value indicating status or command.
+ */
 uint32_t ble_spi_slave_data_decode(uint32_t mode_set_timeout)
 {
+    TRACE;
     uint8_t state_before_sleep;
     uint32_t last_key_ms;
 
@@ -1082,8 +1358,14 @@ uint32_t ble_spi_slave_data_decode(uint32_t mode_set_timeout)
     return 0;
 }
 
+/**
+ * @brief Checks and reads SPI data.
+ *
+ * Called from bluetooth_task.
+ */
 void check_read_spi_data(void)
 {
+    TRACE;
     if(!is_bt_mode_enabled())
     {
         return;
@@ -1106,8 +1388,14 @@ void check_read_spi_data(void)
     }
 }
 
+/**
+ * @brief Starts Bluetooth pairing on a specific channel.
+ *
+ * @param chn The channel to pair on.
+ */
 void k715_bt_start_pair(uint8_t chn)
 {
+    TRACE;
     ble_mark_bt_disconnected();
 
     k715bt_switch_channel(chn);
@@ -1118,8 +1406,14 @@ void k715_bt_start_pair(uint8_t chn)
     k715bt_send_ble_pair(BT_BP_TIMEOUT_MS, NULL, 0);
 }
 
+/**
+ * @brief Initializes the BLE SPI interface and device state.
+ *
+ * Called from k715_bt_init.
+ */
 void k715_ble_spi_init(void)
 {
+    TRACE;
     spi_init();
     spi_inited = 1;
 

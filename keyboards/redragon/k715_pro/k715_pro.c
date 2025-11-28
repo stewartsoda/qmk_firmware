@@ -26,6 +26,9 @@
 #include "gpio.h"
 #include "battery.h"
 
+/**
+ * @brief LED matrix configuration for IS31FL3733.
+ */
 const is31fl3733_led_t PROGMEM g_is31fl3733_leds[IS31FL3733_LED_COUNT] =
 {
     {0, SW7_CS1,    SW9_CS1,    SW8_CS1},
@@ -120,6 +123,13 @@ const is31fl3733_led_t PROGMEM g_is31fl3733_leds[IS31FL3733_LED_COUNT] =
     {1, SW1_CS4,    SW3_CS4,    SW2_CS4}
 };
 
+/**
+ * @brief Sends a HID report over BLE.
+ *
+ * @param report_type The type of report to send (e.g., normal key, extra key).
+ * @param hid_report_buf Pointer to the report data buffer.
+ * @param data_len Length of the report data.
+ */
 static void send_ble_hid_report(uint8_t report_type, uint8_t *hid_report_buf, uint8_t data_len)
 {
     switch(report_type)
@@ -143,11 +153,22 @@ static void send_ble_hid_report(uint8_t report_type, uint8_t *hid_report_buf, ui
     }
 }
 
+/**
+ * @brief Returns the LED state for BLE.
+ *
+ * @return uint8_t Always returns 0.
+ */
 static uint8_t k715_ble_leds(void)
 {
+    // TODO: implement this function to return actual LED state
     return 0;
 }
 
+/**
+ * @brief Sends the keyboard report over BLE.
+ *
+ * @param report Pointer to the keyboard report.
+ */
 static void k715_send_keyboard(report_keyboard_t *report)
 {
     uint8_t raw_data[KEYBOARD_REPORT_KEYS + 2];
@@ -162,6 +183,11 @@ static void k715_send_keyboard(report_keyboard_t *report)
     send_ble_hid_report(BLE_HID_REPORT_TYPE_NORMAL_KEY, raw_data, KEYBOARD_REPORT_KEYS + 2);
 }
 
+/**
+ * @brief Reads the MCU temperature sensor value.
+ *
+ * Used in debug_method.
+ */
 void get_temp_sensor_value(void) {
     static adcsample_t samples[2];
     static const ADCConversionGroup adcgrpcfg = {
@@ -192,7 +218,14 @@ void get_temp_sensor_value(void) {
     dprintf("[%08lu] Temperature: %d C\n", timer_read32(), temperature);
 }
 
-void debug_method(int loops)
+/**
+ * @brief Debug function to print status information.
+ *
+ * Used in keymaps/default/keymap.c.
+ *
+ * @param loops Number of loops (unused in function body).
+ */
+void debug_method()
 {
     uint8_t PC15 = gpio_read_pin(USB_VBUS_PIN);
     uint8_t PC1 = gpio_read_pin(BATTERY_CHARGING_PIN);
@@ -202,6 +235,13 @@ void debug_method(int loops)
     get_temp_sensor_value();
 }
 
+/**
+ * @brief QMK callback for DIP switch updates.
+ *
+ * @param index The index of the DIP switch.
+ * @param active The state of the DIP switch.
+ * @return bool True if the update was handled, false otherwise. TODO: check this return value
+ */
 bool dip_switch_update_kb(uint8_t index, bool active) {
     dprintf("[%08lu] dip_switch_update_kb: index=%d, active=%d\n", timer_read32(), index, active);
     switch (index) {
@@ -222,6 +262,11 @@ bool dip_switch_update_kb(uint8_t index, bool active) {
 }
 
 #ifdef NKRO_ENABLE
+/**
+ * @brief Sends the NKRO report over BLE.
+ *
+ * @param report Pointer to the NKRO report.
+ */
 static void k715_send_nkro(report_nkro_t *report)
 {
     uint8_t raw_data[NKRO_REPORT_BITS + 2];
@@ -237,10 +282,22 @@ static void k715_send_nkro(report_nkro_t *report)
 }
 #endif
 
+/**
+ * @brief Sends the mouse report over BLE.
+ *
+ * Currently empty implementation.
+ *
+ * @param report Pointer to the mouse report.
+ */
 static void k715_send_mouse(report_mouse_t *report)
 {
 }
 
+/**
+ * @brief Sends the extra keys (consumer) report over BLE.
+ *
+ * @param report Pointer to the extra keys report.
+ */
 static void k715_send_extra(report_extra_t *report)
 {
     if(report->report_id == REPORT_ID_CONSUMER)
@@ -253,6 +310,9 @@ static void k715_send_extra(report_extra_t *report)
     }
 }
 
+/**
+ * @brief BLE host driver structure.
+ */
 static host_driver_t k715_ble_driver =
 {
 #ifdef NKRO_ENABLE
@@ -262,6 +322,11 @@ static host_driver_t k715_ble_driver =
 #endif
 };
 
+/**
+ * @brief Switches the host driver to BLE.
+ *
+ * @return bool True if switched, false if already on BLE driver.
+ */
 static bool _swtich_bt_driver(void)
 {
     if(host_get_driver() == &k715_ble_driver)
@@ -281,6 +346,11 @@ static bool _swtich_bt_driver(void)
     return true;
 }
 
+/**
+ * @brief Public function to switch to BLE driver if in BT mode.
+ *
+ * Used in bluetooth_task.
+ */
 void k715bt_bt_swtich_ble_driver(void)
 {
     if(is_bt_mode_enabled())
@@ -289,18 +359,34 @@ void k715bt_bt_swtich_ble_driver(void)
     }
 }
 
+/**
+ * @brief Initializes RGB matrix flags.
+ *
+ * Used in k715_bt_init.
+ */
 void k715_rgb_matrix_flags_init(void)
 {
     rgb_matrix_enable();
     rgb_matrix_set_flags(NORMAL_LED_FLAG_BIT);
 }
 
+/**
+ * @brief Initializes the Bluetooth subsystem.
+ *
+ * Used in keyboard_post_init_kb.
+ */
 void k715_bt_init(void)
 {
     k715_ble_spi_init();
     k715_rgb_matrix_flags_init();
 }
 
+/**
+ * @brief QMK callback for LED updates.
+ *
+ * @param led_state The state of the LEDs.
+ * @return bool True if the update was handled, false otherwise.
+ */
 bool led_update_kb(led_t led_state)
 {
     bool res = led_update_user(led_state);
@@ -313,6 +399,15 @@ bool led_update_kb(led_t led_state)
     return res;
 }
 
+/**
+ * @brief Handles Bluetooth specific keycodes.
+ *
+ * Used in process_record_kb.
+ *
+ * @param keycode The keycode to process.
+ * @param record The key record.
+ * @return bool True if processing should continue, false otherwise.
+ */
 bool process_record_kb_bt(uint16_t keycode, keyrecord_t *record)
 {
     static uint8_t chn = 0;
@@ -344,6 +439,13 @@ bool process_record_kb_bt(uint16_t keycode, keyrecord_t *record)
     return true;
 }
 
+/**
+ * @brief QMK callback for key processing.
+ *
+ * @param keycode The keycode to process.
+ * @param record The key record.
+ * @return bool True if processing should continue, false otherwise.
+ */
 bool process_record_kb(uint16_t keycode, keyrecord_t *record)
 {
     if(!process_record_user(keycode, record))
@@ -354,12 +456,20 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record)
     return process_record_kb_bt(keycode, record);
 }
 
+/**
+ * @brief Task to handle Bluetooth operations.
+ *
+ * Called from housekeeping_task_kb (via bluetooth_tasks).
+ */
 void bluetooth_task(void)
 {
     k715bt_bt_swtich_ble_driver();
     check_read_spi_data();
 }
 
+/**
+ * @brief QMK callback after keyboard initialization.
+ */
 void keyboard_post_init_kb(void)
 {
     gpio_set_pin_input(USB_VBUS_PIN);
@@ -368,6 +478,9 @@ void keyboard_post_init_kb(void)
     keyboard_post_init_user();
 }
 
+/**
+ * @brief QMK callback for suspend power down.
+ */
 void suspend_power_down_kb(void) {
     // code will run multiple times while keyboard is suspended
     uprintf("[%08lu] Going to sleep\n", timer_read32());
@@ -375,6 +488,9 @@ void suspend_power_down_kb(void) {
     suspend_power_down_user();
 }
 
+/**
+ * @brief QMK callback for suspend wakeup initialization.
+ */
 void suspend_wakeup_init_kb(void) {
     // code will run on keyboard wakeup
     uprintf("[%08lu] Waking up\n", timer_read32());
@@ -382,8 +498,20 @@ void suspend_wakeup_init_kb(void) {
     suspend_wakeup_init_user();
 }
 
+/**
+ * @brief Global variable for battery percentage.
+ *
+ * Used in battery_custom.c and k715_pro.c.
+ */
 int battery_percentage;
 
+/**
+ * @brief QMK callback for advanced RGB indicators.
+ *
+ * @param led_min Minimum LED index.
+ * @param led_max Maximum LED index.
+ * @return bool True if handled, false otherwise.
+ */
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max){
     if (!rgb_matrix_indicators_advanced_user(led_min, led_max)) {
         return false;
@@ -396,8 +524,8 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max){
             rgb_matrix_set_color(88, 0,0,0);  // "M" indicator
         }
         /* for battery indicator:
-            0-50 : R = 0xFF, G = 0x00-0xFF
-            51-100 : R = 0xFF-0x00, G = 0xFF
+            0-50 : R = 0xFF, G = 0x00->0xFF
+            51-100 : R = 0xFF->0x00, G = 0xFF
         */
         uint8_t red, green = 0;
         if (battery_percentage <= 50) {
@@ -413,6 +541,11 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max){
     return true;
 }
 
+/**
+ * @brief QMK callback for VBUS state.
+ *
+ * @return bool True if VBUS is high, false otherwise.
+ */
 bool usb_vbus_state(void) {
     return gpio_read_pin(USB_VBUS_PIN);
 }
