@@ -1,9 +1,12 @@
+#include "quantum.h"
 #include "battery_driver.h"
 #include "analog.h"
 #include "gpio.h"
 
 #include "k715_pro.h"
 #include "config.h"
+#include "hal.h"
+#include "hal_adc.h"
 
 
 /**
@@ -27,6 +30,12 @@ uint16_t battery_driver_get_mv(void) {
         2. Read the Vbatt voltage from ADC1 pin C0
         3. Vbatt = (Vbatt_raw / Vrefint_raw) * VREFINT_CAL * 1.2
     */
+
+    if (timer_read32() < 10000) {
+        // wait for 10 seconds after boot to allow supplies to stabilize and load properly
+        return 0;
+    }
+
     uint16_t value = 0;
     palSetLineMode((C0), PAL_MODE_INPUT_ANALOG);
     palSetLineMode((C2), PAL_MODE_INPUT_ANALOG);

@@ -18,8 +18,6 @@
 
 #define STM32_FLASH_SECTORS_PER_BANK        128 /* Maximum, can be redefined.*/
 
-#include_next <halconf.h>
-
 #undef HAL_USE_I2C
 #define HAL_USE_I2C TRUE
 
@@ -28,3 +26,8 @@
 
 #undef SPI_SELECT_MODE
 #define SPI_SELECT_MODE SPI_SELECT_MODE_PAD
+
+#undef HAL_USE_ADC
+#define HAL_USE_ADC TRUE
+
+#include_next <halconf.h>

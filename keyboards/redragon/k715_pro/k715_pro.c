@@ -292,6 +292,10 @@ void debug_method()
  */
 bool dip_switch_update_kb(uint8_t index, bool active) {
     dprintf("[%08lu] dip_switch_update_kb: index=%d, active=%d\n", timer_read32(), index, active);
+    // Process keymap-level DIP switch update function first, (if it exists)
+    if (!dip_switch_update_user(index, active)) {
+        return false;
+    }
     switch (index) {
         case 0:
             dprintf("[%08lu] BT MODE %s\n", timer_read32(), active ? "ON" : "OFF");
@@ -299,14 +303,14 @@ bool dip_switch_update_kb(uint8_t index, bool active) {
             break;
         case 1:
             dprintf("[%08lu] USB MODE %s\n", timer_read32(), active ? "ON" : "OFF");
-            if (active) k715_set_device_mode(KBD_USB_MODE);
+            if (active) k715_set_device_mode(active ? KBD_USB_MODE : KBD_POWEROFF_MODE);
             break;
         case 2:
             dprintf("[%08lu] %s MODE\n", timer_read32(), active ? "WIN" : "MAC");
+            /* TODO: Implement layer switching logic here.
+                For WIN, the default layer should be Layer 0, and Layer 1 the MO() layer.
+                For MAC, the default layer should be layer 2, and layer 3 the MO() layer. */
             break;
-    }
-    if (!dip_switch_update_user(index, active)) {
-        return false;
     }
     return true;
 }
@@ -377,7 +381,7 @@ static host_driver_t k715_ble_driver =
  *
  * @return bool True if switched, false if already on BLE driver.
  */
-static bool _swtich_bt_driver(void)
+static bool _switch_bt_driver(void)
 {
     if(host_get_driver() == &k715_ble_driver)
     {
@@ -416,14 +420,11 @@ void k715_bt_init(void)
  */
 bool led_update_kb(led_t led_state)
 {
-    bool res = led_update_user(led_state);
-
-    if(res)
-    {
-        update_caps_led();
+    if (!led_update_user(led_state)) {
+        return false;
     }
-
-    return res;
+    update_caps_led();
+    return true;
 }
 
 /**
@@ -475,35 +476,25 @@ bool process_record_kb_bt(uint16_t keycode, keyrecord_t *record)
  */
 bool process_record_kb(uint16_t keycode, keyrecord_t *record)
 {
+    // TODO: immediately reset suspend timer
     if(!process_record_user(keycode, record))
     {
         return false;
     }
-
+    // TODO: check this logic to make sure it is doing what is expected
     return process_record_kb_bt(keycode, record);
 }
 
 /**
- * @brief Task to handle Bluetooth operations.
- *
- * Called from housekeeping_task_kb (via bluetooth_tasks).
- */
-void bluetooth_task(void)
-{
-    if(is_bt_mode_enabled())
-    {
-        _swtich_bt_driver();
-    }
-    check_read_spi_data();
-}
-
-/**
  * @brief QMK callback for housekeeping tasks.
- *
- * Calls bluetooth_task.
  */
 void housekeeping_task_kb(void) {
-    bluetooth_task();
+    if(is_bt_mode_enabled())
+    {
+        _switch_bt_driver();
+
+    }
+    check_read_spi_data();
 }
 
 /**
@@ -542,7 +533,7 @@ void suspend_wakeup_init_kb(void) {
  *
  * Used in battery_custom.c and k715_pro.c.
  */
-int battery_percentage;
+int battery_percentage = 0;
 
 /**
  * @brief QMK callback for advanced RGB indicators.
@@ -567,7 +558,10 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max){
             51-100 : R = 0xFF->0x00, G = 0xFF
         */
         uint8_t red, green = 0;
-        if (battery_percentage <= 50) {
+        if (battery_percentage < 0) {
+            red = 0;
+            green = 0;
+        } else if (battery_percentage <= 50) {
             red = 255;
             green = (uint8_t)((battery_percentage * 255) / 50);
         } else {

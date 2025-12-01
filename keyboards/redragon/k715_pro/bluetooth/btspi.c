@@ -1063,7 +1063,7 @@ int sys_tk_diff(uint32_t now, uint32_t start_time, int flag)
  */
 bool is_bt_mode_enabled(void)
 {
-    TRACE;
+    // TRACE;
     if(mode_bt_state)
     {
         return true;
@@ -1093,7 +1093,7 @@ static uint8_t last_spi_notify_line_level = 0xFF;
 /**
  * @brief Invalidates the SPI slave read line.
  */
-void invlaid_read_spi_slave_line(void)
+void invalid_read_spi_slave_line(void)
 {
     TRACE;
     last_spi_notify_line_level = EXT_READ_SPI_SLAVE_READY;
@@ -1365,7 +1365,7 @@ uint32_t ble_spi_slave_data_decode(void)
  */
 void check_read_spi_data(void)
 {
-    TRACE;
+    // TRACE;
     if(!is_bt_mode_enabled())
     {
         return;
@@ -1379,11 +1379,11 @@ void check_read_spi_data(void)
         if(ret == SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE)
         {
             ble_spi_slave_cmd_notify();
-            invlaid_read_spi_slave_line();
+            invalid_read_spi_slave_line();
         }
         else if(ret != 0xFFFFFFFF)
         {
-            invlaid_read_spi_slave_line();
+            invalid_read_spi_slave_line();
         }
     }
 }
