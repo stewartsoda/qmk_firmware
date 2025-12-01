@@ -65,7 +65,7 @@ jobs:
     - name: Checkout QMK Firmware
       uses: actions/checkout@v5
       with:
-        repository: qmk/qmk_firmware
+        repository: ${{ inputs.repository }}/qmk_firmware
 # Uncomment the following for develop branch
         ref: ${{ inputs.branch }}
         fetch-depth: 1
