@@ -26,8 +26,6 @@
 
 /** @brief Flag indicating if SPI is initialized. */
 static uint8_t spi_inited = 0;
-/** @brief Last detected device mode. */
-//static uint8_t last_device_mode = INVALID_DIP_DEVICE_MODE;
 /** @brief Current device mode. */
 static uint8_t now_mode = KBD_BT_MODE;
 /** @brief Keyboard device mode from config. */
@@ -39,12 +37,10 @@ static uint8_t mode_bt_state = 0;
 /** @brief Device information structure. */
 tDevInfo dev_info;
 
-static spi_read_data_t spi_salve_data;
 /** @brief User settings configuration. */
 user_settings_config g_config;
 
-#define now_ms timer_read32()
-#define get_time_ms() timer_read32()
+
 
 /**
  * @brief Starts SPI slave communication.
@@ -554,9 +550,6 @@ uint8_t ble_spi_read_dev_info(uint8_t cmd, uint8_t send_req_flag)
     }
 
 __SPI_RX_DEV_INFO:
-    spi_salve_data.spi_read_length = sizeof(dinf);
-    memcpy(spi_salve_data.spi_read_buf, (uint8_t *)&dinf, sizeof(dinf));
-
     if(is_bt_mode_enabled())
     {
         dev_info.CapsLock = dinf.CapsLock;
@@ -999,7 +992,7 @@ void set_dev_info_bt_timeout(uint32_t timeout, int flag)
         }
         else
         {
-            dev_info.bt_timeout = BT_BP_TIMEOUT - RF_TIMEOUT_OFFSET + get_time_ms();
+            dev_info.bt_timeout = BT_BP_TIMEOUT - RF_TIMEOUT_OFFSET + timer_read32();
         }
     }
     else
@@ -1023,37 +1016,7 @@ void set_dev_info_bt_pair_timeout(void)
 void set_dev_info_bt_reconn_timeout(void)
 {
     TRACE;
-    set_dev_info_bt_timeout(BT_BACK_TIMEOUT - RF_TIMEOUT_OFFSET + get_time_ms(), 1);
-}
-
-/**
- * @brief Calculates the system tick difference.
- *
- * @param now Current time.
- * @param start_time Start time.
- * @param flag Flag (unused).
- * @return int 1 if difference >= 10, 0 otherwise.
- */
-int sys_tk_diff(uint32_t now, uint32_t start_time, int flag)
-{
-    TRACE;
-    int ret;
-
-    if(now > start_time)
-    {
-        ret = 10;
-    }
-    else
-    {
-        ret = timer_elapsed32(start_time);
-    }
-
-    if(ret >= 10)
-    {
-        return 1;
-    }
-
-    return 0;
+    set_dev_info_bt_timeout(BT_BACK_TIMEOUT - RF_TIMEOUT_OFFSET + timer_read32(), 1);
 }
 
 /**
@@ -1201,7 +1164,7 @@ static void handle_bt_disconnect(void) {
     }
 
     ble_mark_bt_disconnected();
-    if(dev_info.bt_timeout && sys_tk_diff(now_ms, dev_info.bt_timeout, 0) && (p || b))
+    if(dev_info.bt_timeout && ((int32_t)(timer_read32() - dev_info.bt_timeout) >= 0) && (p || b))
     {
         dev_info.bt_timeout = 0;
         if(dev_info.btback)

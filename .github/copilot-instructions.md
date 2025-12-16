@@ -8,7 +8,7 @@ You are an expert in QMK Firmware development. You are working on the codebase f
 - **Structure**:
   - `keyboards/`: Keyboard definitions (matrix, pins, layouts).
   - `keyboards/redragon/k715_pro/`: Keyboard definitions for the K715 Pro. You may only modify files within this directory unless explicitly instructed otherwise.
-  - `keyboards/redragon/k715_pro/documentation`: Documentation specifically for the K715 Pro. Do not refer to the .md files in this directory unless explicitly instructed otherwise.
+  - `keyboards/redragon/k715_pro/documentation/`: Documentation specifically for the K715 Pro. Do not refer to the .md files in this directory unless explicitly instructed otherwise.
   - `quantum/`: Core QMK features (layers, keycodes, RGB, etc.).
   - `tmk_core/`: Low-level protocol and hardware abstraction.
   - `drivers/`: MCU and peripheral drivers (OLED, RGB, etc.).

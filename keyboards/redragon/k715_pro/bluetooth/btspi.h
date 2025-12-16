@@ -133,13 +133,6 @@ typedef struct
     uint32_t bt_timeout;
 } tDevInfo;
 
-#define BLE_SPI_RX_BUF_MAX_SIZE 20
-typedef struct
-{
-    uint8_t spi_read_buf[BLE_SPI_RX_BUF_MAX_SIZE];
-    uint8_t spi_read_length;
-} spi_read_data_t;
-
 typedef struct __attribute__((__packed__))
 {
     uint32_t NumLock: 1;
