@@ -40,7 +40,13 @@ tDevInfo dev_info;
 /** @brief User settings configuration. */
 user_settings_config g_config;
 
+static volatile uint8_t ble_spi_rx_reading = 0;
+static uint8_t ble_task_state = 0;
+static uint32_t ble_task_timer = 0;
 
+static bool is_ble_spi_busy(void) {
+    return (ble_task_state != 0) || ble_spi_rx_reading;
+}
 
 /**
  * @brief Starts SPI slave communication.
@@ -299,17 +305,40 @@ void k715bt_switch_channel(uint8_t bt_channel)
 }
 
 /**
- * @brief Sends a request and receives a response via SPI.
+ * @brief Sends the SPI request command.
  *
  * @param cmd The command to send.
+ */
+static void ble_spi_send_request(uint8_t cmd)
+{
+    if(cmd == KBD_CMD_GET_INFO)
+    {
+        k715bt_send_ble_req_bt_info();
+    }
+    else if(cmd == KBD_CMD_BT_GETNAME)
+    {
+        k715bt_send_ble_req_bt_name();
+    }
+    else if(cmd == KBD_CMD_MCU_REQ_BT_FWVER)
+    {
+        k715bt_send_mcu_req_ble_fwver();
+    }
+    else
+    {
+        k715bt_send_ble_req_bt_info();
+    }
+}
+
+/**
+ * @brief Receives the SPI response.
+ *
+ * @param cmd The expected command (or KBD_CMD_UNKNOW).
  * @param buf Buffer to store the response.
  * @param len Length of the buffer.
- * @param send_req_flag Flag to indicate if a request should be sent.
  * @return int The command received in response, or 0 on error.
  */
-int ble_spi_req_recv(uint8_t cmd, uint8_t *buf, uint8_t len, uint8_t send_req_flag)
+static int ble_spi_receive_response(uint8_t cmd, uint8_t *buf, uint8_t len)
 {
-    TRACE;
     uint8_t data[MAX_BLE_SPI_RX_FRAME_MAX_SIZE];
     int ret;
     int i = 0;
@@ -321,27 +350,6 @@ int ble_spi_req_recv(uint8_t cmd, uint8_t *buf, uint8_t len, uint8_t send_req_fl
     if(buf)
     {
         memset(buf, 0, len);
-    }
-
-    if(cmd == KBD_CMD_GET_INFO)
-    {
-        k715bt_send_ble_req_bt_info();
-        wait_ms(10);
-    }
-    else if(cmd == KBD_CMD_BT_GETNAME)
-    {
-        k715bt_send_ble_req_bt_name();
-        wait_ms(10);
-    }
-    else if(cmd == KBD_CMD_MCU_REQ_BT_FWVER)
-    {
-        k715bt_send_mcu_req_ble_fwver();
-        wait_ms(10);
-    }
-    else
-    {
-        k715bt_send_ble_req_bt_info();
-        wait_ms(10);
     }
 
     spi_slave_start();
@@ -460,7 +468,22 @@ __EXIT:
     }
 }
 
-static volatile uint8_t ble_spi_rx_reading = 0;
+/**
+ * @brief Sends a request and receives a response via SPI.
+ *
+ * @param cmd The command to send.
+ * @param buf Buffer to store the response.
+ * @param len Length of the buffer.
+ * @param send_req_flag Flag to indicate if a request should be sent.
+ * @return int The command received in response, or 0 on error.
+ */
+int ble_spi_req_recv(uint8_t cmd, uint8_t *buf, uint8_t len, uint8_t send_req_flag)
+{
+    TRACE;
+    ble_spi_send_request(cmd);
+    wait_ms(10);
+    return ble_spi_receive_response(cmd, buf, len);
+}
 
 /**
  * @brief Reads device information from BLE SPI.
@@ -816,13 +839,13 @@ void k715bt_send_spi_extend_single_packet(uint8_t param_type, uint8_t *param_dat
         return;
     }
 
-    if(ble_spi_rx_reading)
+    if(is_ble_spi_busy())
     {
         uint8_t loop_count = 0;
         while(1)
         {
             wait_ms(2);
-            if(!ble_spi_rx_reading || (++loop_count >= 20))
+            if(!is_ble_spi_busy() || (++loop_count >= 20))
             {
                 break;
             }
@@ -1277,48 +1300,51 @@ static void handle_bt_reconnect(void) {
 }
 
 /**
- * @brief Decodes BLE SPI slave data.
+ * @brief Processes a received BLE packet.
  *
- * @return uint32_t Return value indicating status or command.
+ * @param cmd The command received.
+ * @param buf The data buffer.
  */
-uint32_t ble_spi_slave_data_decode(void)
-{
-    TRACE;
-    uint8_t cmd;
+static void ble_spi_process_packet(uint8_t cmd, uint8_t *buf) {
+    spi_slave_dev_info_t dinf;
 
-    cmd = ble_spi_read_dev_info(KBD_CMD_UNKNOW, 0);
+    if (cmd == KBD_CMD_GET_INFO) {
+        memcpy(&dinf, buf, sizeof(dinf));
 
-    if(cmd == KBD_CMD_INVALID)
-    {
-        return 0xFFFFFFFF;
-    }
-
-    if(cmd != KBD_CMD_GET_INFO)
-    {
-        return SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE;
-    }
-
-    if(dev_info.devmode == KBD_BT_MODE)
-    {
-        if(dev_info.btstate == BTSTATEDISCONN)
+        if(is_bt_mode_enabled())
         {
-            handle_bt_disconnect();
+            dev_info.CapsLock = dinf.CapsLock;
+            dev_info.NumLock = dinf.NumLock;
+            dev_info.ScrollLock = dinf.ScrollLock;
+            update_caps_led();
         }
-        else if(dev_info.btstate == BTSTATEDISCOVER)
+
+        dev_info.usbstate = dinf.state_usb;
+        if(dinf.mode != 0xff)
         {
-            handle_bt_discover();
+            dev_info.btstate = dinf.state_bt;
+            dev_info.devmode = dinf.mode;
         }
-        else if(dev_info.btstate == BTSTATECONNECTED)
+
+        dev_info.btconnected = (dinf.state_bt == BTSTATECONNECTED) ? 1 : 0;
+
+        if(dinf.ch != 0xff && g_config.bt_ch != dinf.ch)
         {
-            handle_bt_connected();
-        }
-        else if(dev_info.btstate == BTSTATERECONN)
-        {
-            handle_bt_reconnect();
+            g_config.bt_ch = dinf.ch;
         }
     }
 
-    return 0;
+    if (cmd == KBD_CMD_GET_INFO) {
+        if(dev_info.devmode == KBD_BT_MODE)
+        {
+            if(dev_info.btstate == BTSTATEDISCONN) handle_bt_disconnect();
+            else if(dev_info.btstate == BTSTATEDISCOVER) handle_bt_discover();
+            else if(dev_info.btstate == BTSTATECONNECTED) handle_bt_connected();
+            else if(dev_info.btstate == BTSTATERECONN) handle_bt_reconnect();
+        }
+    } else if (cmd != KBD_CMD_INVALID) {
+        ble_spi_slave_cmd_notify();
+    }
 }
 
 /**
@@ -1328,26 +1354,33 @@ uint32_t ble_spi_slave_data_decode(void)
  */
 void check_read_spi_data(void)
 {
-    // TRACE;
-    if(!is_bt_mode_enabled())
-    {
-        return;
-    }
+    if(!is_bt_mode_enabled()) return;
 
-    if(check_read_spi_slave_line())
-    {
-        uint32_t ret = 0;
-
-        ret = ble_spi_slave_data_decode();
-        if(ret == SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE)
-        {
-            ble_spi_slave_cmd_notify();
-            invalid_read_spi_slave_line();
-        }
-        else if(ret != 0xFFFFFFFF)
-        {
-            invalid_read_spi_slave_line();
-        }
+    switch(ble_task_state) {
+        case 0: // IDLE
+            if(check_read_spi_slave_line()) {
+                ble_spi_send_request(KBD_CMD_UNKNOW);
+                ble_task_timer = timer_read32();
+                ble_task_state = 1;
+            }
+            break;
+        case 1: // WAIT
+            if(timer_elapsed32(ble_task_timer) >= 10) {
+                ble_task_state = 2;
+            }
+            break;
+        case 2: // READ
+            {
+                uint8_t *buf = (uint8_t *)&(ble_spi_notify_cmd_buf[3]);
+                uint8_t len = MAX_BLE_SPI_NOTIFY_CMD_BUF_SIZE - 3;
+                int ret = ble_spi_receive_response(KBD_CMD_UNKNOW, buf, len);
+                if (ret) {
+                    ble_spi_process_packet(ret, buf);
+                }
+                invalid_read_spi_slave_line();
+                ble_task_state = 0;
+            }
+            break;
     }
 }
 
