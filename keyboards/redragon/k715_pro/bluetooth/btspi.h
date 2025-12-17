@@ -105,29 +105,29 @@
 
 typedef struct
 {
-    uint32_t NumLock: 1;
-    uint32_t CapsLock: 1;
-    uint32_t ScrollLock: 1;
-    uint32_t red: 1;
-    uint32_t green: 1;
-    uint32_t blue: 1;
-    uint32_t win_lock: 1;
-    uint32_t kbd_lock: 1;
+    bool NumLock;
+    bool CapsLock;
+    bool ScrollLock;
+    bool red;
+    bool green;
+    bool blue;
+    bool win_lock;
+    bool kbd_lock;
 
-    uint32_t btstate: 2;
-    uint32_t wifistate: 3;
-    uint32_t btpair: 1;
-    uint32_t btback: 1;
-    uint32_t lowVoltage: 1;
+    uint8_t btstate;
+    uint8_t wifistate;
+    bool btpair;
+    bool btback;
+    bool lowVoltage;
 
-    uint32_t devmode: 7;
-    uint32_t btconnected: 1;
+    uint8_t devmode;
+    bool btconnected;
 
-    uint32_t usbstate: 3;
-    uint32_t fn_down: 1;
-    uint32_t pair: 1;
-    uint32_t res_bt_isr: 1;
-    uint32_t usb_connected: 2;
+    uint8_t usbstate;
+    bool fn_down;
+    bool pair;
+    bool res_bt_isr;
+    uint8_t usb_connected;
 
     uint32_t last_key_ms;
     uint32_t bt_timeout;

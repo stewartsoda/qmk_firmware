@@ -19,6 +19,7 @@
 #include "host_driver.h"
 #include "k715_pro.h"
 #include "btspi.h"
+#include "hal.h"
 
 #define SPI_SLAVE_NOTIFY_CMD_RETURN_VALUE (0xAAAABBBB)
 
@@ -94,6 +95,13 @@ static uint8_t get_dev_mode_detected(void)
     return(now_mode);
 }
 
+static volatile bool ble_irq_triggered = false;
+
+static void ble_irq_callback(void *arg) {
+    (void)arg;
+    ble_irq_triggered = true;
+}
+
 /**
  * @brief Initializes the external read SPI slave GPIO.
  */
@@ -101,6 +109,8 @@ static void init_ext_read_spi_slave_gpio(void)
 {
     TRACE;
     palSetLineMode(EXT_READ_SPI_SLAVE_INT_PIN, EXT_READ_SPI_SLAVE_GPIO_INIT);
+    palEnableLineEvent(EXT_READ_SPI_SLAVE_INT_PIN, PAL_EVENT_MODE_FALLING_EDGE);
+    palSetLineCallback(EXT_READ_SPI_SLAVE_INT_PIN, ble_irq_callback, NULL);
 }
 
 /**
@@ -1074,52 +1084,6 @@ bool is_usb_mode_enabled(void)
     return false;
 }
 
-static uint8_t last_spi_notify_line_level = 0xFF;
-
-/**
- * @brief Invalidates the SPI slave read line.
- */
-void invalid_read_spi_slave_line(void)
-{
-    TRACE;
-    last_spi_notify_line_level = EXT_READ_SPI_SLAVE_READY;
-}
-
-/**
- * @brief Checks the SPI slave read line.
- *
- * @return int 1 if ready, 0 otherwise.
- */
-int check_read_spi_slave_line(void)
-{
-    TRACE;
-    uint8_t line_level;
-    int ret = 0;
-
-    line_level = palReadLine(EXT_READ_SPI_SLAVE_INT_PIN);
-    if(line_level != last_spi_notify_line_level)
-    {
-        if(last_spi_notify_line_level != 0xFF)
-        {
-            last_spi_notify_line_level = line_level;
-            if(line_level == EXT_READ_SPI_SLAVE_READY)
-            {
-                ret = 1;
-            }
-        }
-        else
-        {
-            last_spi_notify_line_level = line_level;
-            if(line_level == EXT_READ_SPI_SLAVE_READY)
-            {
-                ret = 1;
-            }
-        }
-    }
-
-    return ret;
-}
-
 /**
  * @brief Sends the MCU firmware version to BLE.
  */
@@ -1299,6 +1263,25 @@ static void handle_bt_reconnect(void) {
     }
 }
 
+static void update_bluetooth_state(void) {
+    if(dev_info.devmode != KBD_BT_MODE) return;
+
+    switch(dev_info.btstate) {
+        case BTSTATEDISCONN:
+            handle_bt_disconnect();
+            break;
+        case BTSTATEDISCOVER:
+            handle_bt_discover();
+            break;
+        case BTSTATECONNECTED:
+            handle_bt_connected();
+            break;
+        case BTSTATERECONN:
+            handle_bt_reconnect();
+            break;
+    }
+}
+
 /**
  * @brief Processes a received BLE packet.
  *
@@ -1335,13 +1318,7 @@ static void ble_spi_process_packet(uint8_t cmd, uint8_t *buf) {
     }
 
     if (cmd == KBD_CMD_GET_INFO) {
-        if(dev_info.devmode == KBD_BT_MODE)
-        {
-            if(dev_info.btstate == BTSTATEDISCONN) handle_bt_disconnect();
-            else if(dev_info.btstate == BTSTATEDISCOVER) handle_bt_discover();
-            else if(dev_info.btstate == BTSTATECONNECTED) handle_bt_connected();
-            else if(dev_info.btstate == BTSTATERECONN) handle_bt_reconnect();
-        }
+        update_bluetooth_state();
     } else if (cmd != KBD_CMD_INVALID) {
         ble_spi_slave_cmd_notify();
     }
@@ -1358,7 +1335,8 @@ void check_read_spi_data(void)
 
     switch(ble_task_state) {
         case 0: // IDLE
-            if(check_read_spi_slave_line()) {
+            if(ble_irq_triggered) {
+                ble_irq_triggered = false;
                 ble_spi_send_request(KBD_CMD_UNKNOW);
                 ble_task_timer = timer_read32();
                 ble_task_state = 1;
@@ -1377,7 +1355,6 @@ void check_read_spi_data(void)
                 if (ret) {
                     ble_spi_process_packet(ret, buf);
                 }
-                invalid_read_spi_slave_line();
                 ble_task_state = 0;
             }
             break;

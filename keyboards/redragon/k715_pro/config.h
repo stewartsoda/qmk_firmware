@@ -57,3 +57,6 @@
 
 // POWER SETTINGS
 #define BLUETOOTH_POWER_DOWN_TIMEOUT 600000 // ms to wait until bluetooth powers down, 600K ms is 10min.
+
+#define PAL_USE_CALLBACKS TRUE
+#define PAL_USE_WAIT TRUE
