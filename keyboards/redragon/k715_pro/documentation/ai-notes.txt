@@ -1,0 +1,766 @@
+
+================================================================================
+FIRMWARE REVERSE ENGINEERING REPORT
+================================================================================
+File    : fengrun_7231_default_20240410_01_release_bin.bin
+Date    : Apr 10 2024 15:23:08
+Size    : 68,120 bytes (66 KB)
+
+ALSO PRESENT
+------------
+  k715pro.txt : Physical device flash dump (xxd format, 68,144 bytes decoded).
+                Same firmware, but 624 bytes differ from the .bin in 11 regions.
+                Differences are ALL of the pattern: binary=non-FF, dump=0xFF.
+                Likely: dump taken from a device with a slightly different flash
+                state (partial write, EEPROM emulation, or different flash op).
+                NOT a different firmware — core code and strings are identical.
+
+IDENTITY
+--------
+  QMK keyboard ID  : nescafe/fengrun_7231
+    Breakdown: 'nescafe'     = firmware author's internal alias
+               'fengrun_7231'= keyboard product name
+                               (Fengrun Electronics, model/project 7231)
+  QMK version      : 0.20.5-33-g974c01-dirty
+  Git SHA (QMK)    : 974c01b4f845927ad3922ae62793c33187f5852c
+  Commit title     : [Docs] Fix suggested code pattern when a specific
+                     mod-mask is required. (#20512)
+  "dirty" flag     : YES — vendor added uncommitted keyboard-specific changes
+                     on top of commit 974c01b
+
+  GitHub links:
+    QMK main : https://github.com/qmk/qmk_firmware/commit/974c01b4f845927ad3922ae62793c33187f5852c
+    temp4gh  : https://github.com/temp4gh/qmk_firmware/commit/974c01b4f845927ad3922ae62793c33187f5852c
+    (Identical commit — the fork was rebased on or includes this QMK upstream commit.)
+
+HARDWARE
+--------
+  MCU              : STM32F103RCT6 (Arm Cortex-M3, confirmed by visual inspection)
+                     NOTE: 'fengrun_7231' in the QMK keyboard path refers to the
+                     KEYBOARD product, not the MCU. There is no known chip called
+                     FR7231 or Fengrun 7231. No public datasheet or product page
+                     found for any MCU by that name.
+  Load address     : 0x08002000  (8KB bootloader before this = stm32duino/DFU)
+  Initial SP       : 0x20000400  (1 KB of initial stack)
+  Reset handler    : 0x08002238  -> 0x08002160 (ChibiOS/RT startup)
+  Flash end        : 0x08012A18 (app binary), dump extends to 0x08014000 (all 0xFF)
+  STM32F103RCT6    : 256KB flash, 48KB SRAM, Cortex-M3, LQFP64
+  RTOS             : ChibiOS/RT (SVCall handler at 0x0800DF4D)
+
+  Reference fork   : https://github.com/temp4gh/qmk_firmware
+  Branch           : redragon_k715_pro_dev  (keyboards/redragon/k715_pro)
+  CAUTION          : Fork hardware config (I2C addresses, SPI pins) is informative
+                     but not authoritative for this binary. The shipping firmware
+                     has additional features not in the fork (extensive debug
+                     strings, BLE protocol handling, power management).
+
+USB DESCRIPTORS (confirmed from binary at 0x0801210B)
+------------------------------------------------------
+  idVendor         : 0x369B  (same as fork)
+  idProduct        : 0x0021  ← DIFFERS from fork (fork uses 0x00D1)
+  bcdDevice        : 0x0120  (device version 1.20; the '0x0120' string in binary)
+  bcdUSB           : 0x0200  (USB 2.0)
+  bMaxPacketSize   : 64 bytes
+  Product string   : "Gaming Keyboard"
+  Manufacturer str : "fengrun"
+  bNumInterfaces   : 4
+  bMaxPower        : 500mA
+  USB IRQ          : USB_LP_CAN_RX0 @ 0x0800FF8D
+
+PERIPHERALS IN USE (confirmed from vector table + strings)
+----------------------------------------------------------
+  I2C1     : RGB LED matrix driver (I2C1_EV @ 0x0800F789, I2C1_ER @ 0x0800F89D)
+             Driver is IS31FL3733 per fork config; may differ in shipping hw
+  SPI2     : BLE module communication (per fork: CS=B12, SCK=B13, MISO=B14, MOSI=B15)
+             Strings: 'spi rd 0x51', 'spi rd cmd=0x%02x', 'spi err=%d,%d'
+             'read spi notify failed' — full SPI protocol for BLE chip
+  DMA1     : All 7 channels active (0x0800F485–0x0800F4FD); used for I2C/SPI transfers
+  EXTI0–4  : GPIO interrupts @ 0x0800ED09–0x0800EDB9
+  EXTI9_5  : GPIO interrupt @ 0x0800EDE5
+  EXTI15_10: GPIO interrupt @ 0x0800EE4D
+             (All EXTI: likely matrix scan rows, encoder, BLE IRQ pin)
+  ADC      : Battery voltage ("ADC:%d, VBATT:%ld, %ld.%03d, %d-%d", "3.3V voltage")
+  USB FS   : HID keyboard + extra keys + mouse + VIA (4 USB interfaces)
+
+QMK FEATURES (confirmed by strings in binary)
+----------------------------------------------
+  - RGB Matrix      (IS31FL3733 type, EEPROM-persisted; full config strings present)
+  - BLE keyboard    (wireless via SPI-connected BLE chip; BT addr, fw version)
+  - USB HID         (wired mode; 4 interfaces: kbd, extra, mouse, VIA)
+  - VIA             (runtime keymap: 'VIA:set RF test', 'VIA:get bt info')
+  - EEPROM          (flash-emulated; 'NOEEPROM' error handling present)
+  - Mousekeys       ('mousekey [btn|x y v h](rep/acl)')
+  - Extrakeys       (media/system keys)
+  - Oneshot keys    ('Oneshot: active: %d')
+  - Bootmagic       (per fork keyboard.json)
+  - Console/debug   ('DEBUG: disabled.' — console compiled in but disabled at runtime)
+  - DIP switch      ('check DIP=%d,%d,reboot=%d')
+  - Encoder         ('clockwise=%d,layer=%d')
+  - Battery mgmt    (charge detection, low-voltage shutoff, deep sleep, 3.3V rail)
+  - BT pairing      ('init pairing...', 'switch ble drv', 'mark bt disconnected')
+  - RF test mode    (via VIA custom command: 'VIA:set RF test:0x%02X,0x%02X,0x%02X')
+
+ACTIVE INTERRUPT HANDLERS (20 of 76 vector slots used)
+-------------------------------------------------------
+  [ 1] Reset                   -> 0x08002239  (Reset_Handler)
+  [11] SVCall                  -> 0x0800DF4D  (ChibiOS/RT scheduler)
+  [15] SysTick                 -> 0x0800FF3B  (RTOS tick)
+  [22] EXTI0                   -> 0x0800ED09
+  [23] EXTI1                   -> 0x0800ED35
+  [24] EXTI2                   -> 0x0800ED61
+  [25] EXTI3                   -> 0x0800ED8D
+  [26] EXTI4                   -> 0x0800EDB9
+  [27] DMA1_CH1                -> 0x0800F485
+  [28] DMA1_CH2                -> 0x0800F499
+  [29] DMA1_CH3                -> 0x0800F4AD
+  [30] DMA1_CH4                -> 0x0800F4C1
+  [31] DMA1_CH5                -> 0x0800F4D5
+  [32] DMA1_CH6                -> 0x0800F4E9
+  [33] DMA1_CH7                -> 0x0800F4FD
+  [36] USB_LP_CAN_RX0          -> 0x0800FF8D  (USB interrupt)
+  [39] EXTI9_5                 -> 0x0800EDE5
+  [47] I2C1_EV                 -> 0x0800F789
+  [48] I2C1_ER                 -> 0x0800F89D
+  [56] EXTI15_10               -> 0x0800EE4D
+
+  NOTE: Vector table entries [64]–[87] (offsets 0x100–0x15F) show as 0xFF in
+  the physical dump but as Default_Handler in the compiled binary. Unused IRQs
+  only; does not affect behavior (those interrupts are never enabled).
+
+CODE STRUCTURE (approximate)
+------------------------------
+  0x08002000 – 0x0800215F  : Vector table (76 entries, 304 bytes)
+  0x08002160 – 0x08002237  : ChibiOS startup (cpsid, MSP/PSP init, copy .data, zero .bss)
+  0x08002238 – 0x0800223A  : Reset_Handler (branches to startup)
+  0x0800223B – 0x0800223D  : Default_Handler (tight infinite loop — all unhandled IRQs)
+  0x0800223E – 0x0800DF4C  : Main application code (~56 KB, QMK + vendor additions)
+  0x0800DF4D – 0x0800FF3A  : ChibiOS/RT RTOS + HAL layer (thread switch, SVCall)
+  0x0800FF3B – 0x0800FF8C  : SysTick_Handler
+  0x0800FF8D – 0x08010FFF  : USB stack, BLE driver, IRQ handlers, power management
+  0x08011000 – 0x08012010  : Additional QMK code (VIA, RGB, console, key processing)
+  0x08012010 – 0x08012A18  : .rodata: USB descriptors, HID report desc, strings, RGB maps
+
+KEY ADDRESSES (annotated from symbol analysis)
+-----------------------------------------------
+  0x08010E68  "nescafe/fengrun_7231"  (QMK keyboard ID string)
+  0x08010E7D  "0.20.5-33-g974c01-dirty"  (QMK version string)
+  0x08010EAF  "Apr 10 2024"  (build date)
+  0x08010EBB  "0x0120"  (bcdDevice — USB device release version)
+  0x08010EC2  "[%08lu]ver:%s,build on:%s,%s"  (boot-time version log)
+  0x08010EEA  "[%08lu]VID:0x%04X,PID:"  (boot-time USB ID log)
+  0x08012058  "Gaming Keyboard"  (USB product string, UTF-16LE)
+  0x0801207A  "fengrun"  (USB manufacturer string, UTF-16LE)
+  0x0801210B  USB Device Descriptor  (VID=0x369B, PID=0x0021)
+  0x08012090  USB Config Descriptor  (4 interfaces, 500mA)
+
+DUMP vs BINARY DISCREPANCIES (k715pro.txt vs .bin)
+---------------------------------------------------
+  624 bytes differ across 11 regions. Pattern: binary=data, dump=0xFF (erased).
+  Interpretation: Physical device flash was not fully written (likely the DFU
+  bootloader skipped programming flash words that the linker filled with 0x00,
+  since those words would require erasing from 0xFF → no erase needed but write
+  still needed). Some regions may reflect EEPROM emulation page wear.
+
+  Key regions:
+  0x08002100–0x0800215F  : 24 unused IRQ vectors (Default_Handler vs 0xFF)
+  0x08009C40–0x08009C4F  : 16 bytes of function pointer table
+  0x08010880–0x080108DF  : 96 bytes of zero-padding in .rodata
+  + 8 smaller zero-padding regions
+
+NEXT STEPS FOR DEEPER ANALYSIS
+---------------------------------
+  1. Load disassembly.txt into Ghidra:
+       File > Import File > as Raw Binary, ARM Cortex-M3, little-endian
+       Base address: 0x08002000
+       Apply symbol annotations from this report.
+
+  2. Get the STM32F103 SVD for register naming:
+       Ghidra SVD-Loader plugin + STM32F103.svd
+       (https://github.com/posborne/cmsis-svd/tree/master/data/STMicro)
+
+  3. Clone reference source for function matching:
+       git clone https://github.com/temp4gh/qmk_firmware -b redragon_k715_pro_dev
+       Build at commit 974c01b to get reference ELF; use Ghidra Version Tracking
+       or BinDiff to auto-label QMK standard functions (~80% of code).
+
+  4. Unique vendor code to reverse manually:
+       - BLE SPI protocol driver (SPI2, 'spi rd 0x51' suggests register 0x51)
+       - Power management (ADC battery monitoring, charging FSM)
+       - RF test mode (VIA custom command, likely factory test)
+       - DIP switch logic
+       - Custom bootmagic / mode switching
+
+  5. USB PID 0x0021 may identify the actual device in USB ID databases.
+     Check: https://the-sz.com/products/usbid/index.php?v=0x369B&p=0x0021
+
+OUTPUT FILES
+--------------
+  disassembly.txt      : Full 28,177-line annotated linear disassembly
+  analysis_summary.txt : This report
+
+
+================================================================================
+FILE PROVENANCE ANALYSIS (added after user clarification)
+================================================================================
+
+FILES IN ~/keeb/:
+  fengrun_7231_default_20240410_01_release_bin.bin  [67KB]  Manufacturer firmware release
+  k715pro_stock_DFU_fw.bin                          [72KB]  Physical flash dump (minus bootloader)
+  k715pro.txt                                       [326KB] Hex dump (xxd format)
+  fengrun.txt                                       [326KB] Hex dump (xxd format, same data as k715pro.txt[0:68KB])
+
+RELATIONSHIPS (verified by binary comparison):
+  k715pro_stock_DFU_fw.bin[0:68120] == fengrun_7231_default...bin  ← IDENTICAL ✓
+    → The keyboard shipped with the EXACT manufacturer-provided firmware.
+    → The remaining 5,608 bytes of the stock dump are erased flash (all 0xFF).
+
+  fengrun.txt decoded[0:68120] == k715pro.txt decoded[0:68120]     ← IDENTICAL ✓
+    → fengrun.txt and k715pro.txt contain the same data; k715pro.txt extends further.
+
+  fengrun.txt decoded vs manufacturer .bin: 624 differences
+  (Pattern: dump=0xFF where binary=data, across 11 flash regions)
+    → These hex dump files are from a DIFFERENT source than the manufacturer .bin
+      and the physical stock dump. They appear to be from an older firmware build
+      or a differently-flashed device where those specific flash regions were
+      never written (left as erased 0xFF).
+    → These files are NOT authoritative — treat as secondary reference only.
+
+AUTHORITATIVE SOURCES FOR REVERSE ENGINEERING:
+  PRIMARY:   fengrun_7231_default_20240410_01_release_bin.bin  (manufacturer release)
+  SECONDARY: k715pro_stock_DFU_fw.bin                         (confirms primary is stock)
+  DISCARD:   fengrun.txt, k715pro.txt                         (unknown provenance, minor diffs)
+
+REVERSE ENGINEERING GOALS (per user):
+  1. Understand firmware well enough to support it
+  2. Build a clean-room replacement firmware including:
+     - Complete BLE support (beyond temp4gh fork)
+     - Proper power management
+     - RGB key enhancements
+     - Additional new features
+  3. Comprehensive feature understanding as foundation for goals 1 & 2
+  NOTE: Upstream QMK submission is not a goal due to licensing constraints.
+        The replacement firmware will be built clean-room, not a fork of this binary.
+
+
+================================================================================
+HARDWARE DETAILS (from debug notes + fork source code + binary analysis)
+================================================================================
+
+CONFIRMED CHIP LIST
+-------------------
+  STM32F103RCT6    : Main MCU (Arm Cortex-M3, 256KB flash, 48KB SRAM, LQFP64)
+                     NOTE: QMK should target STM32F103xE (not default xB) with
+                     custom ld/STM32F103xC_stm32duino.ld — fixes flash/RAM ranges.
+                     board.h must #undef STM32F103xB / #define STM32F103xE.
+
+  FR5082DM         : Bluetooth SoC (Phytec/Fangtek)
+                     - Integrated: RF, CODEC, PMU, Baseband, Cortex-M3 CPU, audio DSP
+                     - 1MB internal flash (for BLE firmware, separate from STM32)
+                     - Connects to STM32 via QSPI (mapped as SPI2 in firmware)
+                     - BLE firmware version reported separately from QMK version
+
+  IS31FL3723       : RGB LED matrix driver (2× on PCB)
+                     - 12×16 dot matrix, drives up to 64 RGB LEDs each = 128 LEDs total
+                     - 1MHz I2C interface
+                     - Pin-compatible with IS31FL3733 (QMK uses IS31FL3733 driver)
+                     - I2C addresses: 0x50 (GND/GND) and 0x53 (GND/VCC)
+
+  FT24C512A        : 64KB I2C EEPROM (Fremont Micro Devices)
+                     - 1MHz I2C, ~1M program-erase cycles
+                     - May be on I2C2 (not responding on I2C1 bus scan)
+                     - NOT configured in any existing QMK fork — unknown usage in stock fw
+
+PIN ASSIGNMENTS (STM32F103RCT6)
+-------------------------------
+  I2C1 (LED drivers)
+    B6   SCL
+    B7   SDA
+
+  SPI2 (FR5082DM BLE chip)
+    B12  CS  (SPI_SLAVE_CS)
+    B13  SCK
+    B14  MISO
+    B15  MOSI
+
+  ADC (Battery)
+    C0   BATTERY_ADC_PIN (set to analog input)
+    C2   Actual battery voltage (ADC1 channel IN12 = PC2) — see note
+    Internal VREFINT used as reference voltage
+
+  Power / Status
+    C1   BATTERY_CHARGING_PIN (PC1, read to detect charging status)
+    C15  USB_VBUS_PIN (PC15, high = USB power present)
+
+  Matrix (partial, confirmed from debug notes)
+    PA15 COL15  (also JTDI — configured as GPIO, disables JTAG)
+    PA14 COL14  (also JTCK/SWCLK — disabling SWD in normal operation)
+    PA13 COL13  (also JTMS/SWDIO — disabling SWD in normal operation)
+    ⚠️  SWD is disabled during normal operation by btsys.c:board_init()
+        This means on-device debugging requires re-enabling SWD or using USB DFU.
+
+  NOTE: ADC pin discrepancy between config.h (BATTERY_ADC_PIN=C0) and
+  battery_custom.c (samples ADC_CHANNEL_IN12 = PC2). Stock firmware uses
+  get_battery_voltage@0x08005D90 which reads VREFINT + VBATT via ADC1.
+
+FR5082DM SPI PROTOCOL (register 0x51)
+---------------------------------------
+  SPI read of register 0x51 returns 12 bytes (BLE connection status):
+    Byte  0  : 0x01  (status type / header byte)
+    Byte  1  : Connection state:
+                 0x00 = disconnected
+                 0x01 = discovering / pairing
+                 0x02 = connected
+                 0x03 = connected (with updated channel state?)
+    Byte  2  : BT channel (0-2 for channels 1-3, masked & 0x7F for comparison)
+    Bytes 3-4: Unknown (0x00)
+    Byte  5  : 0xFF
+    Bytes 6-10: 0x00
+    Byte  11 : 0xFF
+
+  Polling behavior: STM32 polls register 0x51 up to 9 times with 10ms delay,
+  checking byte 2 (connection state) until it matches expected value.
+  SPI read function: 0x080038DC (core SPI transfer)
+  BLE poll function: ~0x08003A8C (uses 0x080038DC, retries 9×)
+
+KNOWN FIRMWARE FUNCTIONS (from binary + debug notes)
+------------------------------------------------------
+  0x08003A8C  bt_poll_status()     Poll FR5082DM reg 0x51 (up to 9 retries)
+  0x08003A96                       movs r0, #0x51  — sends register address 0x51
+  0x080038DC  spi_read_register()  Core SPI read (used by bt_poll_status)
+  0x08005D90  get_battery_voltage() Reads ADC VREFINT + VBATT, returns mV×2 as uint16
+  0x08010E68  (data) "nescafe/fengrun_7231"
+  0x08010E7D  (data) "0.20.5-33-g974c01-dirty"
+  0x08012010  (data) "USB configured."
+  0x0801210B  (data) USB Device Descriptor
+
+BATTERY VOLTAGE CALCULATION (reverse engineered from 0x08005D90)
+-----------------------------------------------------------------
+  From debug output: ADC:716, VBATT:4160 mV
+  Formula: VBATT_mV = (VBATT_raw / VREFINT_raw) * VREFINT_nominal * 1.2 * 2000
+  Where VREFINT_nominal ≈ 1.2V (STM32 internal reference)
+  Result is uint16, upper 16 bits masked off.
+
+HID CONSOLE BEHAVIOR (from live debug capture)
+-----------------------------------------------
+  RGB matrix modes: 1-13 (cycling, persistent to EEPROM)
+  BT channels: 1, 2, 3 (FN+1/2/3)
+  Encoder mode 0: volume/media control
+  Encoder mode 1: RGB mode / speed control (hold knob to toggle)
+  LED blink API:  led_blink_start(ts):led X, Y, (on_ms, off_ms), count, flags
+    X = ?, Y = LED index
+  OS toggle: MAC ↔ WIN (FN+OS key)
+  RGB toggle: FN+SPACE (saves to EEPROM)
+  Debug toggle: dedicated DEBUG key (toggles console output)
+  BLE state log: 'send pair...', 'discover:0x01', 'connected:0x02'
+  BLE extra HID report: id=4 for encoder events
+    04 E9 00 = clockwise  (Consumer HID 0x00E9 = Volume Increment)
+    04 EA 00 = counter-CW (Consumer HID 0x00EA = Volume Decrement)
+    04 00 00 = key release
+
+THINGS NOT YET REVERSED (high priority for clean-room firmware)
+---------------------------------------------------------------
+  1. Full FR5082DM SPI command set (beyond register 0x51)
+  2. FR5082DM pairing / channel management commands
+  3. FT24C512A EEPROM usage (which I2C bus? what data layout?)
+  4. Full matrix pin assignments (only PA13-15 confirmed so far)
+  5. DIP switch pins and behavior
+  6. Charge controller IC (if present) and charge detection circuit
+  7. Full SWD re-enable procedure for debugging
+
+
+================================================================================
+BLE STATE MACHINE DETAIL (from live debug logs)
+================================================================================
+
+FR5082DM Register 0x51 Response Format (12 bytes):
+  Byte 0: Message type
+            0x01 = status report
+            0x03 = confirmed / updated connected state (seen after initial connect)
+  Byte 1: Connection state
+            0x00 = disconnected
+            0x01 = discovering (BLE advertisement scan, pairing mode)
+            0x02 = connected
+  Byte 2: BT channel (0x00 = not applicable / channel 1 in some contexts)
+  Bytes 3-4: 0x00 (unknown)
+  Byte 5:  0xFF (padding/unused)
+  Bytes 6-10: 0x00 (unknown)
+  Byte 11: 0xFF (padding/unused)
+
+BLE Connection State Machine:
+  PAIR sequence (FN+channel):
+    1. "set bt_chn:N" → "send pair..."
+    2. Poll 0x51: byte[1]=0x00 → "mark bt disconnected" → "bt pair again"
+    3. Send pair again → poll 0x51: byte[1]=0x01 → "bt discover:0x01,chn:N,p:1"
+    4. Poll 0x51: byte[1]=0x02 → "bt connected:0x01,chn:N" (initial)
+    5. Internal: "update connected:0x03,chn:N,b:0x01"
+    6. Poll 0x51: byte[0]=0x03,byte[1]=0x02 → "bt connected:0x03,chn:N" (confirmed)
+    Timeout after ~60s: "bt pair/reconn timeout!"
+
+  RECONNECT sequence (quick tap FN+channel):
+    1. "set bt_chn:N" → "send reconn..."
+    2. Poll 0x51: byte[1]=0x02 → "bt connected:0x01,chn:N" (fast path if already known)
+    3. Or: byte[1]=0x00 → "bt reconn again" → retry
+
+LED BLINK API (led_blink_start):
+  Signature: led_blink_start(timestamp):led GROUP, LED_ID, (on_ms,off_ms), count, flags
+  Groups:
+    0 = Bluetooth / indicator LEDs
+    2 = Keyboard indicator LEDs
+
+  LED_ID reference (Group 0 = BT indicators):
+    1 = BT channel 1 indicator
+    2 = BT channel 2 indicator
+    4 = BT channel 3 indicator  (gap — LED 3 may be USB or WIN/MAC indicator)
+
+  LED_ID reference (Group 2 = keyboard):
+    11 = encoder ring indicator (mode change blink)
+    12 = RGB speed/mode indicator
+
+  Flags: 0 = normal, 88 (0x58) = BT pairing/reconnect indicator (long sequence)
+
+  Examples:
+    Pairing BT3:       led 0, 4, (250,250), 120, 88   -- blinks 120× while pairing
+    Reconnecting BT1:  led 0, 1, (500,500), 60, 88    -- blinks 60× while reconnecting
+    Encoder mode chg:  led 2, 11, (300,300), 2, 0     -- 2 blinks to confirm mode
+    Speed adjust:      led 2, 12, (250,250), 3, 0     -- 3 blinks to confirm
+
+BATTERY ADC NOTES
+-----------------
+  Stock firmware debug output format: "ADC:{raw}, VBATT:{mV}, {V}, {flags}"
+    Example: ADC:716, VBATT:4160, 4.160, 1-1
+    "1-1" flags likely: {USB_VBUS?}-{charging_status?}
+
+  ADC pin survey (10-bit mode from user testing):
+    PC0 (ADC123_IN10): reads 913-938 at full charge, 547-590 at low battery ← battery!
+    PC1 (ADC123_IN11): reads 0 initially, ~850 or ~990 — likely charge status
+    PC2 (ADC123_IN12): always reads zero (fork battery_custom.c uses this — BUG)
+    PC3 (ADC123_IN13): reads ~300 or ~138 (unknown function)
+
+  Stock firmware get_battery_voltage formula (at 0x08005D90):
+    Result_mV = (VBATT_raw / VREFINT_raw) * 1.2 * 1000 * 2
+    ADC channel for VBATT: likely ADC1_IN10 (PC0), NOT IN12 (PC2)
+    ADC channel for VREFINT: ADC1_CH17 (internal reference)
+
+  ⚠️  FORK BUG: battery_custom.c in stewartsoda fork samples ADC_CHANNEL_IN12 (PC2)
+      which always reads zero. Should sample PC0 (ADC_CHANNEL_IN10).
+
+HID REPORT STRUCTURE (from debug)
+----------------------------------
+  Standard keyboard: Report ID 1 (NKRO)
+  Media/consumer:   Report ID 2
+  Mouse:            Report ID 3
+  Encoder events:   Report ID 4
+    04 E9 00 = encoder clockwise      (Consumer 0x00E9 = Volume Increment)
+    04 EA 00 = encoder counter-CW     (Consumer 0x00EA = Volume Decrement)
+    04 00 00 = encoder key release
+
+OTHER OBSERVED BEHAVIORS
+--------------------------
+  OS toggle: FN + OS key → "now OS:MAC" / "now OS:WIN" (stored to EEPROM)
+  RGB toggle: FN+SPACE → "RGB_TOG flag:0x5->0x0" (off) or "0x0->0x5" (on)
+    RGB on  = flags 0x5 (RGB on + settings preserved)
+    RGB off = flags 0x0
+  Dedicated DEBUG key toggles HID console output
+  Caps Lock indicator: LED "A" indicator (led 0, 3? — unlabeled), turns red on CAPS
+  Mode indicator: LED "M" indicator = blue normally (BT/USB mode)
+  Battery report over BLE: "send bt batt_level:100" after ADC reading
+
+
+================================================================================
+FR5082DM CHIP DETAILS (from Freqchip datasheet v1.3.4)
+================================================================================
+
+MANUFACTURER: Freqchip (www.freqchip.com) — NOT Phytec/Fangtek (previous assumption incorrect)
+PACKAGE: QFN40, 6×4mm
+
+ARCHITECTURE:
+  - Dual-core: 32-bit Cortex-M3 @ 48MHz (BT/app subsystem)
+  - Floating-point DSP @ 156MHz (audio & algorithms)
+  - 96KB + 416KB = 512KB SRAM total
+  - 1MB XIP Flash for Cortex-M3 (BT firmware)
+  - Bluetooth 5.0 Dual Mode (BR/EDR + BLE)
+
+PHYSICAL INTERFACES (relevant to keyboard use):
+  - UART: for AT commands AND debug output
+      → STM32 PC11 = UART4_RX ← FR5082 UART_TX (confirmed in board_init)
+      → STM32 PC10 = UART4_TX → FR5082 UART_RX (inferred, not yet confirmed in code)
+      → The "send pair..." / "send reconn..." commands are likely AT commands over UART
+      → "spi rd 0x51" status checks are separate reads over SPI2
+  - SPI/QSPI: up to 104×4 Mbps QSPI; used here in standard 1-bit SPI mode
+      → STM32 SPI2 (B12/B13/B14/B15) ↔ FR5082 SPI pins
+  - I2C: for external EEPROM or devices
+  - USB-OTG: present on chip (not used in keyboard application)
+
+POWER SUBSYSTEM (critical for battery design):
+  - VBAT input: 2.5V – 4.3V (direct LiPo battery connection)
+  - VCHG input: 4.5V – 5.5V (USB charge input)
+  - Built-in charger circuit (VCHG pin = charger state detection)
+  - Dual on-chip DC/DC converters (system @ 1.4V, audio @ 1.8V)
+  - On-chip LDO for VDDIO (1.8–3.3V, typ 2.9V output, 120mA max)
+  - Sleep standby: <70µA @ 500ms sniff interval
+  - Power off: <3µA leakage
+  ⚠️  The FR5082 manages battery charging autonomously — STM32 only reads charge state
+
+BLE PROFILES SUPPORTED:
+  - A2DP v1.3, AVRCP v1.6 (audio streaming/control)
+  - HFP v1.8 (hands-free)
+  - SPP v1.2 (serial port — likely used for STM32↔FR5082 command channel)
+  - HID profile NOT listed in datasheet — custom Freqchip firmware in ROM
+  - "Human Interface Devices" listed as typical application
+
+DUAL-CHANNEL STM32 ↔ FR5082 COMMUNICATION ARCHITECTURE:
+  Channel 1 — UART (command/response):
+    STM32 → FR5082 (UART4_TX, PC10): sends AT-style commands
+      "send pair..."    = AT command to start BLE pairing on channel N
+      "send reconn..."  = AT command to reconnect to known device on channel N
+    FR5082 → STM32 (UART4_RX, PC11): sends status/debug responses
+  
+  Channel 2 — SPI2 (status polling):
+    STM32 polls FR5082 register 0x51 (12 bytes) to read connection state
+    Used to verify commands completed, detect connect/disconnect events
+
+FR5082DM GPIO PINS (QFN40, relevant outputs):
+  PC0-PC5, PC6-PC7: Multi-Function GPIO
+  PB0-PB7:          Multi-Function GPIO
+  PA0-PA3:          Multi-Function GPIO (DM variant only; DS has PA0 only)
+  PD6-PD7:          Multi-Function GPIO (DM variant only)
+  Total: 22 GPIOs (DM), 18 GPIOs (DS)
+  ⚠️  FR5082 GPIO port names (PCx, PBx, PAx) are unrelated to STM32 GPIO names
+
+================================================================================
+FULL KEYBOARD MATRIX PINOUT
+================================================================================
+
+MATRIX PINS (STM32F103RCT6, from keyboard.json):
+  COLUMNS (16):  A6, A7, C4, C5, B0, B1, C6, C7, C8, C9, A8, A9, A10, A13, A14, A15
+  ROWS    (6):   A0, A1, A2, A3, A4, A5
+
+  NOTE: A13/A14/A15 are JTAG/SWD pins repurposed as matrix columns.
+  JTAG/SWD is disabled via AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_DISABLE in board_init().
+  This is a one-way operation — debug access requires USB DFU after boot.
+
+ADDITIONAL CONFIRMED PINS:
+  C0   BATTERY_ADC_PIN (analog input, battery voltage measurement)
+  C1   BATTERY_CHARGING_PIN (input, reads FR5082 charge status; 0=charging, 1=charged)
+  C2   Reads zero — not used for battery despite fork code suggestion
+  C3   Unknown (reads ~300 or ~138 ADC)
+  C4   COL2 (matrix column)
+  C5   COL3 (matrix column)
+  C11  UART4_RX ← FR5082 UART_TX (configured as PAL_MODE_INPUT in board_init)
+  C15  USB_VBUS_PIN (input; 0=USB power present, 1=USB disabled/unplugged)
+  B6   I2C1_SCL (to IS31FL3723 LED drivers)
+  B7   I2C1_SDA (to IS31FL3723 LED drivers)
+  B12  SPI2_CS   → FR5082
+  B13  SPI2_SCK  → FR5082
+  B14  SPI2_MISO ← FR5082
+  B15  SPI2_MOSI → FR5082
+  B3   IS31FL3733_POWERON_PIN (BOOT1 repurposed; drives IS31FL3723 enable)
+
+BOARD_INIT() SEQUENCE (from k715_pro.c):
+  1. AFIO->MAPR |= AFIO_MAPR_SWJ_CFG_DISABLE  — disables JTAG+SWD (frees A13/14/15)
+  2. CAPS_LOCK_DRV_PIN → PAL_MODE_OUTPUT_PUSHPULL + set low
+  3. PC11 → PAL_MODE_INPUT (UART4_RX for FR5082 UART)
+  4. PA13, PA14, PA15 → PAL_MODE_OUTPUT_PUSHPULL (now usable as matrix COLs)
+  5. init_set_IS31FL3733_poweron() — set B3 high to power IS31FL3723
+
+DIP SWITCHES (from k715_pro.c dip_switch_update_kb()):
+  Index 0: BT mode toggle (active = BT ON)
+  Index 1: USB mode toggle (active = USB ON)
+  Index 2: WIN/MAC mode toggle (active = WIN, inactive = MAC)
+  → Likely 3-position physical switch on PCB
+
+
+================================================================================
+FR5082 SPI PROTOCOL — COMPLETE SPECIFICATION (from btspi.c/h + k715_pro.h)
+================================================================================
+
+SPI CONFIGURATION:
+  Mode 3 (CPOL=1, CPHA=1)
+  Clock divisor: 32 → 72MHz / 32 = 2.25 MHz
+  CS: B12 (active low, with 200µs setup delay after assert)
+
+SPI FRAME FORMAT:
+  Single packet TX (STM32 → FR5082):
+    [0x5A] [len+1] [cmd] [data...] [checksum]
+    checksum = sum of bytes[1..N-1]
+    max payload: 12 bytes (MAX_SPI_BLE_SINGLE_PACKET_LENGTH)
+
+  Single packet RX (FR5082 → STM32):
+    [0x5A] [len+1] [cmd|flag] [data...] [checksum]
+    bit 7 of byte 2: 0=single, 1=multi-packet
+    Total frame: 16 bytes (MAX_BLE_SPI_RX_FRAME_MAX_SIZE)
+
+  Multi-packet TX:
+    [0x5A] [13] [cmd|0x80] [seq|end_flag] [data×11] [checksum]
+    end_flag (bit7 of seq byte): 1=last packet, 0=more packets
+    max 11 payload bytes per packet (MAX_SPI_BLE_MUL_PACKET_LENGTH)
+
+  INTERRUPT PIN: B9 (EXT_READ_SPI_SLAVE_INT_PIN)
+    FR5082 asserts B9 low (falling edge) to notify STM32 that data is ready
+    Configured as INPUT_PULLUP, falling-edge interrupt
+
+FR5082 SPI COMMAND SET:
+  ─────────────────────────────────────────────────────────────────────────────
+  CMD   Name                       Direction          Notes
+  ─────────────────────────────────────────────────────────────────────────────
+  0x01  BLE_HID_REPORT_TYPE_NORMAL_KEY  MCU→FR5082    Keyboard HID report
+  0x02  BLE_HID_REPORT_TYPE_MOUSE_KEY   MCU→FR5082    Mouse HID report
+  0x03  BLE_HID_REPORT_TYPE_EXTRA_KEY   MCU→FR5082    Consumer/media HID report
+  0x04  BLE_HID_REPORT_TYPE_SYSTEM_KEY  MCU→FR5082    System key HID report
+  0x05  BLE_HID_REPORT_TYPE_ALL_KEY     MCU→FR5082    NKRO keyboard report
+  0x11  KBD_CMD_MODE_SET           MCU→FR5082    Set mode (0=BT, 2=USB, 8=poweroff)
+  0x21  KBD_CMD_BT_PAIR            MCU→FR5082    Start pairing on current channel
+  0x22  KBD_CMD_BT_BACK            MCU→FR5082    Reconnect (data: timeout byte)
+  0x23  KBD_CMD_BT_DISCONNECT      MCU→FR5082    Disconnect BLE
+  0x25  KBD_CMD_BT_SETNAME         MCU→FR5082    Set BT device name
+  0x26  KBD_CMD_BT_GETNAME         MCU→FR5082    Get BT device name (triggers response)
+  0x27  KBD_CMD_BT_SETCHN          MCU→FR5082    Set BT channel (data: channel byte 1-3)
+  0x51  KBD_CMD_GET_INFO           MCU→FR5082    Request device info (triggers response)
+        ← responds with spi_slave_dev_info_t (12 bytes)
+  0x66  KBD_CMD_BT_QUERY_KEY_STATE MCU→FR5082    Query key state from FR5082
+  0x67  KBD_CMD_MCU_RESP_KEY_STATE FR5082→MCU    FR5082 requests/confirms key state
+  0x68  KBD_CMD_QUERY_LOST_KEY_STATE MCU→FR5082  Query missed key events
+  0x71  KBD_CMD_SEND_BT_TEST_RF    MCU→FR5082    RF test mode
+  0x72  KBD_CMD_MCU_REQ_BT_FWVER  MCU→FR5082    Request FR5082 firmware version
+        ← responds with 19-byte version string
+  0x73  KBD_CMD_BT_REQ_MCU_FWVER  FR5082→MCU    FR5082 requests MCU firmware version
+  0x74  KBD_CMD_BT_REQ_DEV_STATUS FR5082→MCU    FR5082 requests device status
+  0x75  KBD_CMD_BT_REQ_LIGHT_CONTROL FR5082→MCU FR5082 requests LED control
+  0x76  KBD_CMD_BT_REQ_DEEP_SLEEP  FR5082→MCU   FR5082 requests deep sleep
+  0x77  KBD_CMD_BT_SET_TEST_MODE   MCU→FR5082   Set test mode
+  ─────────────────────────────────────────────────────────────────────────────
+
+spi_slave_dev_info_t STRUCTURE (12 bytes, packed):
+  Bytes 0-3 (uint32 bitfield, little-endian):
+    bit  0:    NumLock state (1=on)
+    bit  1:    CapsLock state (1=on) — explains 0x01↔0x03 alternation in logs!
+    bit  2:    ScrollLock state (1=on)
+    bit  3:    reserved
+    bit  4:    remote_btn_down
+    bit  5:    remote_btn_dec
+    bit  6:    remote_btn_add
+    bit  7:    remote_chg
+    bits 8-15: state_bt (BT connection state: 0=disconn, 1=discover, 2=connected)
+    bits 16-23: state_24g (2.4GHz state — unused in this keyboard)
+    bits 24-31: state_usb (USB state)
+  Byte 4:  mode (device mode: 0=BT, 2=USB, 8=poweroff)
+  Byte 5:  eff_mode (RGB effect mode, 0xFF=unset/default)
+  Byte 6:  eff_bright (RGB brightness)
+  Byte 7:  eff_speed (RGB speed)
+  Byte 8:  eff_r (RGB red)
+  Byte 9:  eff_g (RGB green)
+  Byte 10: eff_b (RGB blue)
+  Byte 11: ch (BT channel, 0xFF=unset)
+
+  ⚠️  EARLIER ANALYSIS CORRECTION: bytes 0 (0x01/0x03) in debug logs are NOT a
+      "message type" — they are the NumLock/CapsLock bits in the bitfield!
+        0x01 = NumLock ON,  CapsLock OFF
+        0x03 = NumLock ON,  CapsLock ON   ← explains log behavior during CAPS test
+
+user_settings_config STRUCTURE (9 bytes, stored in emulated EEPROM):
+  Byte 0: magic_num (0xBE = valid)
+  Byte 1 bitfield: caps_lock, num_lock, scroll_lock, winlock_state,
+                   kbd_lock, reset_factory, [reserved×2]
+  Byte 2: kbd_dev_mode (0xFF = default/unset)
+  Byte 3: bt_ch (BT channel, default=1)
+  Byte 4: bt_used
+  Byte 5: bt_last_connected (default=0xFF = none)
+  Byte 6: reset_reason
+  Byte 7: unused
+
+ADDITIONAL PINS (from btspi.h):
+  B2   IS31FL3733_POWERON_PIN (BOOT1, drives IS31FL3723 enable) ← was B3 in prior docs
+  B8   CAPS_LOCK_DRV_PIN (active LOW: palClearLine=on, palSetLine=off)
+  B9   EXT_READ_SPI_SLAVE_INT_PIN (FR5082 data-ready IRQ, falling-edge, pull-up)
+  C13  EXT_READ_DIP_PIN_USB_MODE (DIP switch index 1 — USB mode)
+  C14  EXT_READ_DIP_PIN_BT_MODE  (DIP switch index 0 — BT mode)
+
+DIP SWITCH LOGIC:
+  The keyboard has a 3-position physical switch (BT / OFF / USB):
+  Index 0 (C14): active = BT mode
+  Index 1 (C13): active = USB mode
+  Index 2: WIN/MAC mode toggle
+  Mode codes: KBD_BT_MODE=0, KBD_USB_MODE=2, KBD_POWEROFF_MODE=8
+
+BLE TIMEOUT VALUES:
+  Reconnect timeout: 60 seconds (BT_BACK_TIMEOUT)
+  Pairing timeout:   60 seconds (BT_BP_TIMEOUT)
+  RF offset:          1 second  (RF_TIMEOUT_OFFSET)
+
+BLE HID KEYBOARD REPORT FORMAT (over SPI):
+  raw_data[0] = modifiers byte
+  raw_data[1] = 0x00 (reserved)
+  raw_data[2..N] = key codes (KEYBOARD_REPORT_KEYS bytes)
+  Sent as SPI command 0x01 (BLE_HID_REPORT_TYPE_NORMAL_KEY)
+
+
+================================================================================
+COMPLETE PIN ASSIGNMENT SUMMARY (STM32F103RCT6)
+================================================================================
+
+  Pin    Function                Direction    Notes
+  ─────────────────────────────────────────────────────────────────────────────
+  A0     ROW0  (matrix)          OUT PP
+  A1     ROW1  (matrix)          OUT PP
+  A2     ROW2  (matrix)          OUT PP
+  A3     ROW3  (matrix)          OUT PP
+  A4     ROW4  (matrix)          OUT PP
+  A5     ROW5  (matrix)          OUT PP
+  A6     COL0  (matrix)          IN         (JTAG disabled, shared nothing)
+  A7     COL1  (matrix)          IN
+  A8     COL10 (matrix)          IN
+  A9     COL11 (matrix)          IN
+  A10    COL12 (matrix)          IN
+  A13    COL13 (matrix)          OUT PP     Was JTMS-SWDIO; JTAG disabled in board_init
+  A14    COL14 (matrix)          OUT PP     Was JTCK-SWCLK; JTAG disabled in board_init
+  A15    COL15 (matrix)          OUT PP     Was JTDI; JTAG disabled in board_init
+  B0     COL4  (matrix)          IN
+  B1     COL5  (matrix)          IN
+  B2     IS31FL3723_POWERON      OUT PP     BOOT1 repurposed; high = LED drivers on
+  B6     I2C1_SCL                           IS31FL3723 LED drivers
+  B7     I2C1_SDA                           IS31FL3723 LED drivers
+  B8     CAPS_LOCK_DRV_PIN       OUT PP     Active LOW (clear=on, set=off)
+  B9     FR5082_INT              IN PU      Falling-edge IRQ; FR5082 data-ready signal
+  B12    SPI2_NSS / FR5082_CS    OUT PP     SPI2 chip select for FR5082
+  B13    SPI2_SCK                           FR5082 SPI clock
+  B14    SPI2_MISO                          FR5082 → STM32 data
+  B15    SPI2_MOSI                          STM32 → FR5082 data
+  C0     BATTERY_ADC             IN analog  Battery voltage via voltage divider
+  C1     BATTERY_CHARGING        IN         0=charging, 1=charged/not charging
+  C2     (reads zero — unused)
+  C4     COL2  (matrix)          IN
+  C5     COL3  (matrix)          IN
+  C6     COL6  (matrix)          IN
+  C7     COL7  (matrix)          IN
+  C8     COL8  (matrix)          IN
+  C9     COL9  (matrix)          IN
+  C10    UART4_TX                           STM32 → FR5082 UART (inferred)
+  C11    UART4_RX                IN         FR5082 → STM32 UART (set in board_init)
+  C13    DIP_USB_MODE            IN         DIP switch: USB mode
+  C14    DIP_BT_MODE             IN         DIP switch: BT mode
+  C15    USB_VBUS                IN         0=USB power present, 1=absent
+
+  ─────────────────────────────────────────────────────────────────────────────
+  Unaccounted STM32F103RCT6 pins (LQFP64):
+    PA11/PA12  USB_DM/USB_DP (used by USB)
+    PC12, PD2  (unknown — possibly more DIP or status LEDs)
+    PB3-PB5    (unknown — not used in matrix or SPI; possibly indicator LEDs)
+    PB10, PB11 (unknown — possibly I2C2 for FT24C512A EEPROM)
+    PB16/PC0 etc. as above
+
+================================================================================
+OPEN QUESTIONS (remaining after this session)
+================================================================================
+
+  1. UART protocol detail: Is UART4 (PC10/PC11) used for AT commands, debug output
+     from FR5082, or bidirectional? Stock firmware may have UART handler evidence.
+  2. FT24C512A EEPROM: Which I2C bus (I2C1 or I2C2)? What I2C address?
+     Candidate I2C2 pins: PB10 (SCL), PB11 (SDA) — unconfirmed.
+  3. BLE HID profile: FR5082 datasheet only lists A2DP/AVRCP/HFP/SPP.
+     Custom HID profile must be in Freqchip ROM firmware. No public documentation.
+  4. Full keyboard layout → LED index → IS31FL3723 SW/CS mapping.
+  5. PC12/PD2/PB3-PB5 pin usage.
+  6. FR5082 MAC addresses for each of the 3 BT channels.
+  7. eff_mode/eff_bright/eff_speed fields: How does FR5082 use these?
+     Presumably FR5082 can control RGB when in deep sleep mode (MCU powered off).
+
